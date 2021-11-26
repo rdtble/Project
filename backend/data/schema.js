@@ -1,16 +1,18 @@
-const { ObjectId } = require("mongodb");
 const mongoose = require("mongoose");
+const { Schema } = mongoose;
+
 mongoose.connect("mongodb://localhost:27017/RoundTable");
 
 const postsCollection = mongoose.model("Posts", {
-  userPosted: ObjectId,
+  userPosted: Schema.Types.Mixed,
   title: String,
   description: String,
   date: { type: Date, default: Date.now },
   tags: [String],
   usersUpvoted: [Object],
   usersDownvoted: [Object],
-  comments: [Object],
+  isReply: Boolean,
+  replies: [Object],
 });
 
 const usersCollection = mongoose.model("Users", {

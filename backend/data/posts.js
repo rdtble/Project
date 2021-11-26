@@ -2,33 +2,49 @@ const posts = require("./index").postsCollection;
 
 const { ObjectId } = require("mongodb");
 
-//functions to implement
-//addPost
-//getPost
-//getPosts
-//removePost
-//addtags, deleteTags, edit title, edit description
-//userUpVotedPost
-//userDownVotedPost
-//filterPost
-
-//SortPost
-//CommentPost
-//editComment
-//DeleteComment
-
-const addPost = async (userID, title, description, tags) => {
+const addPost = async (
+  userID,
+  description,
+  tags,
+  title = "",
+  isReply = false
+) => {
   const post = new posts({
-    userPosted: userID,
+    userPosted: ObjectId(userID),
     title: title,
     description: description,
     tags: tags,
     usersUpvoted: [],
     usersDownvoted: [],
-    comments: [],
+    isReply: isReply,
+    replies: [],
   });
 
   const addedInfo = await post.save();
+};
+
+const addReplytoPost = async (postID, replyPostID) => {
+  const data = await posts.findByIdAndUpdate(
+    { _id: ObjectId(postID) },
+    {
+      $addToSet: {
+        replies: ObjectId(replyPostID),
+      },
+    }
+  );
+};
+
+const deletePost = async (postID, userID) => {
+  const data = await posts.findByIdAndUpdate(
+    {
+      _id: ObjectId(postID),
+      userPosted: ObjectId(userID),
+    },
+    {
+      description: "Post Deleted",
+      userPosted: null,
+    }
+  );
 };
 
 //yet to implement sort by feature
@@ -41,15 +57,6 @@ const getAndSortPosts = async (pageSize, pageNum, sortBy) => {
 const getPostbyID = async (postID) => {
   const data = await posts.find({ _id: ObjectId(postID) });
   return data;
-};
-
-const editTitle = async (postID, title, userID) => {
-  const data = await posts.updateOne(
-    { _id: ObjectId(postID), userPosted: ObjectId(userID) },
-    {
-      title: title,
-    }
-  );
 };
 
 const editDescription = async (postID, desciption, userID) => {
@@ -85,7 +92,7 @@ const removeTagsFromPost = async (postID, tags, userID) => {
 
 const userUpVotedPost = async (postID, userID) => {
   const data = await posts.updateOne(
-    { _id: ObjectId(postID), userPosted: ObjectId(userID) },
+    { _id: ObjectId(postID) },
     {
       $addToSet: {
         usersUpvoted: ObjectId(userID),
@@ -99,7 +106,7 @@ const userUpVotedPost = async (postID, userID) => {
 
 const userDownVotedPost = async (postID, userID) => {
   const data = await posts.updateOne(
-    { _id: ObjectId(postID), userPosted: ObjectId(userID) },
+    { _id: ObjectId(postID) },
     {
       $addToSet: {
         usersDownvoted: ObjectId(userID),
@@ -122,7 +129,7 @@ const fiterPosts = async (tagsToFilter, pageSize, pageNum) => {
 
 module.exports = {
   addPost,
-  getPosts,
+  getAndSortPosts,
   getPostbyID,
   removeTagsFromPost,
   addTagsToPost,
@@ -131,6 +138,8 @@ module.exports = {
   userDownVotedPost,
   userUpVotedPost,
   fiterPosts,
+  addReplytoPost,
+  deletePost,
 };
 
 // functions to test
