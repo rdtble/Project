@@ -12,7 +12,10 @@ const addPost = async (
   errorHandling.checkUserPosted(userID);
   errorHandling.checkString(description, "Desciption");
   errorHandling.checkString(title, "Title", false);
-  tags.map((tag) => errorHandling.checkString(tag, "Tag"));
+  // tags.map((tag) => errorHandling.checkString(tag, "Tag"));
+  for (let i = 0; i < tags.length; i++) {
+    errorHandling.checkString(tags[i], "Tag");
+  }
 
   const post = new posts({
     userPosted: ObjectId(userID),

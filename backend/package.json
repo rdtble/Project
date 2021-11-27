@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "seed": "node ./tasks/seed.js",
     "start": "node index.js"
   },
   "keywords": [
@@ -15,12 +16,14 @@
   "author": "Hanish, Manas, Pradeep, Dhruv",
   "license": "ISC",
   "dependencies": {
+    "axios": "^0.21.1",
     "apollo-server": "^3.5.0",
     "bluebird": "^3.7.2",
     "graphql": "^16.0.1",
     "mongodb": "^4.2.0",
     "mongoose": "^6.0.13",
     "redis": "^3.1.2",
-    "uuid": "^8.3.2"
+    "uuid": "^8.3.2",
+    "seed": "^0.4.4"
   }
 }
