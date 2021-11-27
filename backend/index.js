@@ -12,8 +12,6 @@ const typeDefs = gql`
     filterPosts(tags: [String]): [Post]
     getUser(username: ID!, password: String!): User
     getPost(id: ID): Post
-    getChatRooms: [Room]
-    getChatRoom(id: ID): Room
   }
 
   type Post {
@@ -34,20 +32,11 @@ const typeDefs = gql`
     lastname: String
     email: String
     password: String
-    createdPosts: [Post]
-    createdRooms: [Room]
-    upVotedPosts: [Post]
-    downVotedPosts: [Post]
-    attendedRooms: [Room]
+    createdPosts: [Object]
+    upVotedPosts: [Object]
+    downVotedPosts: [Object]
+    attendedRooms: [Object]
     repliedPosts: [Post]
-  }
-
-  type Room {
-    id: ID!
-    url: String!
-    createdUser: User!
-    isActive: Boolean
-    UsersJoined: [User]
   }
 
   type Mutation {
@@ -57,8 +46,6 @@ const typeDefs = gql`
     DeletePost(userID: ID!, postID: ID!): Post
     AddPost(userID: ID!, title: String!, description: String!): Post
     updatePost(userID: ID!, postID: ID!, description: String!): Post
-    addRoom(userID: ID): Room
-    joinRoom(userID: ID): Room
   }
 `;
 
