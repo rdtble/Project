@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/rdtble/Project/issues"
   },
-  "homepage": "https://github.com/rdtble/Project#readme"
+  "homepage": "https://github.com/rdtble/Project#readme",
+  "dependencies": {
+    "mongoose": "^6.0.13"
+  }
 }

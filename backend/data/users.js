@@ -145,11 +145,11 @@ module.exports = {
   userAction,
 };
 
-userAction(
-  "61a183593130f6abfc162ec0",
-  "userDeletesPost",
-  "61a0e6807ab067bfc1e61af7"
-);
+// userAction(
+//   "61a183593130f6abfc162ec0",
+//   "userDeletesPost",
+//   "61a0e6807ab067bfc1e61af7"
+// );
 
 // Testing
 
