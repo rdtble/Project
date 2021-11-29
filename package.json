@@ -4,7 +4,8 @@
   "description": "A web project for discussions",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "seed": "node ./tasks/seed.js"
   },
   "repository": {
     "type": "git",
@@ -15,5 +16,8 @@
   "bugs": {
     "url": "https://github.com/rdtble/Project/issues"
   },
-  "homepage": "https://github.com/rdtble/Project#readme"
+  "homepage": "https://github.com/rdtble/Project#readme",
+  "dependencies": {
+    "mongoose": "^6.0.13"
+  }
 }
