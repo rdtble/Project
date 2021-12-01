@@ -7,7 +7,7 @@ const client = redis.createClient();
 
 const typeDefs = gql`
   type Query {
-    getPosts(sortBy: String, pageNum: Int): [Post]
+    getPosts(sortBy: String, pageNum: Int, pageNum: Int): [Post]
     searchPosts(searchTerm: String!): [Post]
     filterPosts(tags: [String]): [Post]
     getUser(username: ID!, password: String!): User
@@ -19,10 +19,11 @@ const typeDefs = gql`
     userPosted: String!
     title: String
     description: String!
-    numUpvotes: Int
-    numDownvotes: Int
-    comments: [Post]
-    userShared: [User]
+    tags: [String]
+    usersUpvoted: [User]
+    usersDownvoted: [User]
+    isReply: Boolean
+    replies: [Post]
   }
 
   type User {
@@ -32,20 +33,21 @@ const typeDefs = gql`
     lastname: String
     email: String
     password: String
-    createdPosts: [Object]
-    upVotedPosts: [Object]
-    downVotedPosts: [Object]
-    attendedRooms: [Object]
-    repliedPosts: [Post]
+    userUpvotedPosts: [Post]
+    userDownvotedPosts: [Post]
+    userPosts: [Post]
   }
-
+  
   type Mutation {
-    userUpVotesPost(userID: ID!, postID: ID!): Post
-    userDownVotesPost(userID: ID!, postID: ID!): Post
-    userRepliesPost(userID: ID!, postID: ID!, description: String!): Post
-    DeletePost(userID: ID!, postID: ID!): Post
-    AddPost(userID: ID!, title: String!, description: String!): Post
-    updatePost(userID: ID!, postID: ID!, description: String!): Post
+    AddPost(userID: ID!, title: String, description: String!, tags:[String], isReplyToOtherPost:Boolean!, parentPostID: ID): Post
+    deletePost(userID:ID!, postID:ID!)
+    editDescription(postID:ID!,desciption:String,userID:ID!):Post
+    addTagsToPost(postID:ID!,tags:[String],userID:ID!)
+    removeTagsFromPost(postID:ID!,tags:[String],userID:ID!)
+    userUpVotedPost(postID:ID!, userID:ID!)
+    userDownVotedPost(userID: ID!, postID: ID!)    
+    AddUser(username: String!, firstname: String!, description: String!): Post
+    EditUser(userID:ID!, updateParams:Object)
   }
 `;
 
