@@ -1,90 +1,193 @@
-const { ApolloServer, gql } = require("apollo-server");
-const redis = require("redis");
-const bluebird = require("bluebird");
-bluebird.promisifyAll(redis.RedisClient.prototype);
+const { ApolloServer, gql, ApolloError } = require("apollo-server");
+//const redis = require("redis");
+//const bluebird = require("bluebird");
+//bluebird.promisifyAll(redis.RedisClient.prototype);
 const uuid = require("uuid");
-const client = redis.createClient();
+//const client = redis.createClient();
+
+const userData = require('./data/users');
+const postsData = require('./data/posts');
 
 const typeDefs = gql`
   type Query {
-    getPosts(sortBy: String, pageNum: Int, pageNum: Int): [Post]
-    searchPosts(searchTerm: String!): [Post]
-    filterPosts(tags: [String]): [Post]
-    getUser(username: ID!, password: String!): User
-    getPost(id: ID): Post
+    getPost(id: String!): String
   }
 
-  type Post {
-    id: ID!
-    userPosted: String!
-    title: String
-    description: String!
-    tags: [String]
-    usersUpvoted: [User]
-    usersDownvoted: [User]
-    isReply: Boolean
-    replies: [Post]
-  }
-
-  type User {
-    id: ID!
-    username: ID!
-    firstname: String
-    lastname: String
-    email: String
-    password: String
-    userUpvotedPosts: [Post]
-    userDownvotedPosts: [Post]
-    userPosts: [Post]
-  }
-  
   type Mutation {
-    AddPost(userID: ID!, title: String, description: String!, tags:[String], isReplyToOtherPost:Boolean!, parentPostID: ID): Post
-    deletePost(userID:ID!, postID:ID!)
-    editDescription(postID:ID!,desciption:String,userID:ID!):Post
-    addTagsToPost(postID:ID!,tags:[String],userID:ID!)
-    removeTagsFromPost(postID:ID!,tags:[String],userID:ID!)
-    userUpVotedPost(postID:ID!, userID:ID!)
-    userDownVotedPost(userID: ID!, postID: ID!)    
-    AddUser(username: String!, firstname: String!, description: String!): Post
-    EditUser(userID:ID!, updateParams:Object)
+    AddPost(
+      userID: ID!
+      desciption: String
+      title: String
+      tags: [String]
+    ): String
+    AddUser(
+      firstname: String
+      lastname: String
+      username: String
+      email: String
+      password: String
+    ): String
+    EditUser(
+      userID: ID!
+      firstname: String
+      lastname: String
+      email: String
+      password: String
+    ): String
+    DeletePost(
+      userID: ID!
+      postID: ID!
+    ):String
+    EditDescription(
+      userID: ID!
+      postID: ID!
+      desciption: String
+    ):String
+    AddTagsToPost(
+      userID: ID!
+      postID: ID!
+      tags:[String]!
+    ):String
+    RemoveTagsToPost(
+      userID: ID!
+      postID: ID!
+      tags:[String]!
+    ):String
+    UserUpVotedPost(
+      userID: ID!
+      postID: ID!
+    ):String
+    UserDownVotedPost(
+      userID: ID!
+      postID: ID!
+    ):String
   }
 `;
 
 let resolvers = {
   Query: {
     getPost: async (_, args) => {
-      const postID = "post_" + args.id;
-      const post = await client.getAsync(postID);
-      return JSON.parse(post);
+      return "hello";
     },
   },
   Mutation: {
     AddPost: async (_, args) => {
-      const post = {
-        id: uuid.v4(),
-        userPosted: args.userPosted,
-        title: args.title,
-        description: args.description,
-        numUpvotes: 0,
-        numDownvotes: 0,
-        comments: [],
-        userShared: [],
-      };
-      await client.setAsync("post_" + post.id, JSON.stringify(post));
-      return post;
+
+      try {
+        const id = await postsData.addPost(args.userID,args.desciption,args.tags,args.title);
+        console.log(id)
+        const user = await userData.userAction(args.userID,"userCreatedPost",id)
+        return user;
+      }catch(e){
+        throw new ApolloError(e,400);
+      }
     },
+    AddUser: async (_, args) => {
+      try {
+        const newUser = await userData.addUser(
+          args.firstname,
+          args.lastname,
+          args.username,
+          args.email,
+          args.password
+        );
+        return newUser;
+      } catch(e){
+        throw new ApolloError(e,400);
+      }
+    },
+    EditUser: async (_, args) => {
+      try{
+        const updatedUser = await userData.editUserProfile(
+          args.userID,
+          {firstname : args.firstname,
+         lastname: args.lastname,
+         email: args.email,
+         password: args.password}
+        );
+        return updatedUser;
+      }catch(e){
+        throw new ApolloError(e, 400);
+      }
+    },
+    DeletePost: async (_, args) => {
+      try{
+        const post = await postsData.deletePost(
+          args.postID,
+          args.userID);
+        const user = await userData.userAction(args.userID,"userDeletesPost",args.postID)
+        return user;
+      }catch(e){
+        throw new ApolloError(e, 400);
+      }
+    },
+    EditDescription: async(_, args) => {
+      try{
+        const description = await postsData.editDescription(
+          args.postID,
+          args.desciption,
+          args.userID
+          );
+        return description;
+      }catch(e){
+        throw new ApolloError(e, 400);
+      }
+    },
+    AddTagsToPost: async(_, args) => {
+      try{
+        const addTags = await postsData.addTagsToPost(
+          args.postID,
+          args.tags,
+          args.userID
+          );
+        return addTags;
+      }catch(e){
+        throw new ApolloError(e, 400);
+      }
+    },
+    RemoveTagsToPost: async(_, args) => {
+      try{
+        const removeTags = await postsData.removeTagsFromPost(
+          args.postID,
+          args.tags,
+          args.userID
+          );
+        return removeTags;
+      }catch(e){
+        throw new ApolloError(e, 400)
+      }
+    },
+    UserUpVotedPost: async(_, args) => {
+      try{
+        const upPosts = await postsData.userUpVotedPost(
+          args.postID,
+          args.userID
+          );
+          const user = await userData.userAction(args.userID,"userUpvotedPost",args.postID)  
+        return user;
+      }
+      catch(e){
+        throw new ApolloError(e, 400);
+      }
+    },
+    UserDownVotedPost: async(_, args) => {
+      try{
+        const downPosts = await postsData.userDownVotedPost(
+          args.postID,
+          args.userID
+          );
+          const user = await userData.userAction(args.userID,"userDownvotedPost",args.postID)
+        return user;
+      }
+      catch(e){
+        throw new ApolloError(e, 400);
+      }
+    }
   },
 };
 
-let args = {
-  userPosted: "seed",
-  title: "How is web programming 1",
-  description: "I would like to know how is web programming 1 by patrick hill",
-};
+const server = new ApolloServer({typeDefs, resolvers});
 
-args = {
-  id: "45797fd5-b66f-477e-afb9-a387f9b3fb08",
-};
-
-console.log(resolvers.Query.getPost(1, args).then((x) => console.log(x)));
+server.listen().then(({url}) => {
+  console.log(`Server running at ${url}`);
+});
