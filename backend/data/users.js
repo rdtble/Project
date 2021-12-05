@@ -33,6 +33,8 @@ const addUser = async (firstname, lastname, username, email, password) => {
   });
 
   const addedInfo = user.save();
+
+  return user.toString();
 };
 
 const editUserProfile = async (userID, updateParams) => {
@@ -78,6 +80,7 @@ const editUserProfile = async (userID, updateParams) => {
   if (data.modifiedCount == 0) {
     throw "Cannot edit the user profile.";
   }
+  return data.toString();
 };
 
 const userAction = async (userID, actionName, postID) => {

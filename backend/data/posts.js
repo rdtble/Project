@@ -28,6 +28,7 @@ const addPost = async (
     replies: [],
   });
   const addedInfo = await post.save();
+  return post._id.toString();
 };
 
 const addReplytoPost = async (postID, replyPostID) => {
@@ -251,7 +252,7 @@ module.exports = {
 
 // addPost(
 //   String(ObjectId()),
-//   "post desciption",
+//   "post description",
 //   ["data science", "deep learning"],
 //   "post title"
 // ).then((x) => {
