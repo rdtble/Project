@@ -83,7 +83,7 @@ const getAndSortPosts = async (pageSize, pageNum, sortBy = "default") => {
 
   const skip = pageSize * (pageNum - 1);
   data = await posts.find().skip(skip).limit(pageSize);
-  return data;
+  return data.toString();
 };
 
 const getPostbyID = async (postID) => {
@@ -92,7 +92,7 @@ const getPostbyID = async (postID) => {
   if (data.length === 0) {
     throw "Cannot find a post with the given ID: " + postID;
   }
-  return data;
+  return data.toString();
 };
 
 const editDescription = async (postID, description, userID) => {
@@ -201,7 +201,7 @@ const filterPosts = async (tagsToFilter, pageSize = 10, pageNum = 1) => {
     .find({ tags: { $all: tagsToFilter } })
     .skip(skip)
     .limit(pageSize);
-  return data;
+  return data.toString();
 };
 
 module.exports = {

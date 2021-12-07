@@ -11,6 +11,9 @@ const postsData = require('./data/posts');
 const typeDefs = gql`
   type Query {
     getPost(id: String!): String
+    filterPosts(tags: [String]): String
+    getUser(id: String!): String
+    getPosts(sortBy : String, pageNum: Int, pageSize: Int): String
   }
 
   type Mutation {
@@ -67,15 +70,48 @@ const typeDefs = gql`
 let resolvers = {
   Query: {
     getPost: async (_, args) => {
-      return "hello";
+      try{
+      const post = await postsData.getPostbyID(args.id);
+      console.log(post);
+      return post;
+      }catch(e){
+        throw new ApolloError(e,400);
+      }
+    },
+    filterPosts : async (_, args) => {
+      try{
+        const filter = await postsData.filterPosts(args.tags,10,1);
+        return filter;
+      }
+      catch(e){
+        throw new ApolloError(e,400);
+      }
+    },
+    getUser: async (_, args) => {
+      try{
+      const user = await userData.getUserbyID(args.id);
+      return user;
+      }catch(e){
+        throw new ApolloError(e,400);
+      }
+    },
+    getPosts: async (_, args) => {
+      try{
+        const posts = await postsData.getAndSortPosts(10,1,"default")
+        console.log(posts);
+        return posts;
+      }
+      catch(e){
+        throw new ApolloError(e, 400);
+      }
     },
   },
+
   Mutation: {
     AddPost: async (_, args) => {
 
       try {
         const id = await postsData.addPost(args.userID,args.desciption,args.tags,args.title);
-        console.log(id)
         const user = await userData.userAction(args.userID,"userCreatedPost",id)
         return user;
       }catch(e){
