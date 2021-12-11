@@ -16,14 +16,14 @@
   "author": "Hanish, Manas, Pradeep, Dhruv",
   "license": "ISC",
   "dependencies": {
-    "axios": "^0.21.1",
     "apollo-server": "^3.5.0",
+    "axios": "^0.21.1",
     "bluebird": "^3.7.2",
     "graphql": "^16.0.1",
     "mongodb": "^4.2.0",
     "mongoose": "^6.0.13",
     "redis": "^3.1.2",
-    "uuid": "^8.3.2",
-    "seed": "^0.4.4"
+    "seed": "^0.4.4",
+    "uuid": "^8.3.2"
   }
 }

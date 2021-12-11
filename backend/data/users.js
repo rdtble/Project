@@ -33,6 +33,8 @@ const addUser = async (firstname, lastname, username, email, password) => {
   });
 
   const addedInfo = user.save();
+
+  return user.toString();
 };
 
 const editUserProfile = async (userID, updateParams) => {
@@ -78,6 +80,7 @@ const editUserProfile = async (userID, updateParams) => {
   if (data.modifiedCount == 0) {
     throw "Cannot edit the user profile.";
   }
+  return data.toString();
 };
 
 const userAction = async (userID, actionName, postID) => {
@@ -139,28 +142,18 @@ const userAction = async (userID, actionName, postID) => {
   }
 };
 
+const getUserbyID = async (userID) => {
+  errorHandling.checkStringObjectId(userID, "User ID");
+  const data = await users.find({ _id: ObjectId(userID) });
+  if (data.length === 0) {
+    throw "Cannot find a user with the given ID: " + userID;
+  }
+  return data.toString();
+};
+
 module.exports = {
   addUser,
   editUserProfile,
   userAction,
+  getUserbyID,
 };
-
-// userAction(
-//   "61a183593130f6abfc162ec0",
-//   "userDeletesPost",
-//   "61a0e6807ab067bfc1e61af7"
-// );
-
-// Testing
-
-// editUserProfile("61a183430cfb131c143c8dc9", {
-//   password: "helo",
-// });
-
-// addUser(
-//   "han",
-//   "Pallapothu",
-//   "hanishrohi",
-//   "hpallap1@stvens.edu",
-//   "password"
-// ).then((x) => console.log(x));
