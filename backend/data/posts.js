@@ -1,6 +1,11 @@
 const posts = require("./schema").postsCollection;
 const errorHandling = require("./errors");
 const { ObjectId } = require("mongodb");
+const bluebird = require('bluebird');
+const redis = require ('redis');
+const client = redis.createClient();
+bluebird.promisifyAll(redis.RedisClient.prototype)
+bluebird.promisifyAll(redis.Multi.prototype)
 
 const addPost = async (
   userID,
@@ -28,6 +33,10 @@ const addPost = async (
     replies: [],
   });
   const addedInfo = await post.save();
+  existingData = await posts.find({title: post.title})
+  if(existingData.length>0){
+    await client.hsetAsync('userPosted',post._id.toString(),JSON.stringify(post)); 
+  }
   return post._id.toString();
 };
 
@@ -71,6 +80,7 @@ const deletePost = async (postID, userID) => {
   if (data.modifiedCount == 0) {
     throw "Cannot delete the post.";
   }
+  await client.hdelAsync('userPosted',postID) 
 };
 
 //yet to implement sort by feature
@@ -83,7 +93,7 @@ const getAndSortPosts = async (pageSize, pageNum, sortBy = "default") => {
 
   const skip = pageSize * (pageNum - 1);
   data = await posts.find().skip(skip).limit(pageSize);
-  return data.toString();
+  return data;
 };
 
 const getPostbyID = async (postID) => {
@@ -92,7 +102,7 @@ const getPostbyID = async (postID) => {
   if (data.length === 0) {
     throw "Cannot find a post with the given ID: " + postID;
   }
-  return data.toString();
+  return data;
 };
 
 const editDescription = async (postID, description, userID) => {
@@ -201,7 +211,7 @@ const filterPosts = async (tagsToFilter, pageSize = 10, pageNum = 1) => {
     .find({ tags: { $all: tagsToFilter } })
     .skip(skip)
     .limit(pageSize);
-  return data.toString();
+  return data;
 };
 
 module.exports = {
