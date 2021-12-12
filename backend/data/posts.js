@@ -7,18 +7,27 @@ const addPost = async (
   description,
   tags,
   title = "",
-  isReply = false
+  isReply = false,
+  parentPost = null
 ) => {
   errorHandling.checkUserPosted(userID);
   errorHandling.checkString(description, "Desciption");
-  errorHandling.checkString(title, "Title", false);
-  // tags.map((tag) => errorHandling.checkString(tag, "Tag"));
+  errorHandling.checkString(title, "Title", false); //false because title can be empty
+
+  if (parentPost !== null) {
+    errorHandling.checkStringObjectId(parentPost);
+  }
+
+  if (!Array.isArray(tags)) {
+    throw "Tags should be of array type. i.e., array of tags";
+  }
+  tags.map((tag) => errorHandling.checkString(tag, "Tag"));
   for (let i = 0; i < tags.length; i++) {
     errorHandling.checkString(tags[i], "Tag");
   }
 
   const post = new posts({
-    userPosted: ObjectId(userID),
+    userPosted: userID,
     title: title,
     description: description,
     tags: tags,
@@ -26,9 +35,13 @@ const addPost = async (
     usersDownvoted: [],
     isReply: isReply,
     replies: [],
+    parentPost: parentPost,
   });
   const addedInfo = await post.save();
-  return post._id.toString();
+
+  post._doc._id = post._doc._id.toString();
+
+  return post;
 };
 
 const addReplytoPost = async (postID, replyPostID) => {
@@ -39,7 +52,7 @@ const addReplytoPost = async (postID, replyPostID) => {
     { _id: ObjectId(postID) },
     {
       $addToSet: {
-        replies: ObjectId(replyPostID),
+        replies: replyPostID,
       },
     }
   );
@@ -47,6 +60,7 @@ const addReplytoPost = async (postID, replyPostID) => {
   if (data.modifiedCount == 0) {
     throw "Cannot add replied information to the post. ";
   }
+  return true;
 };
 
 // delete does not mean deleting the post. It means to make the post description as "deleted" and user_info Anonymous.
@@ -57,20 +71,22 @@ const deletePost = async (postID, userID) => {
   const data = await posts.updateOne(
     {
       _id: ObjectId(postID),
-      userPosted: ObjectId(userID),
+      userPosted: userID,
     },
     {
       description: "Post Deleted",
       userPosted: null,
       $pullAll: {
-        usersDownvoted: [ObjectId(userID)],
-        usersUpvoted: [ObjectId(userID)],
+        usersDownvoted: [userID],
+        usersUpvoted: [userID],
       },
     }
   );
   if (data.modifiedCount == 0) {
     throw "Cannot delete the post.";
   }
+
+  return true;
 };
 
 //yet to implement sort by feature
@@ -82,17 +98,26 @@ const getAndSortPosts = async (pageSize, pageNum, sortBy = "default") => {
   if (pageSize < 1) throw "Page size cannot be less than 1";
 
   const skip = pageSize * (pageNum - 1);
-  data = await posts.find().skip(skip).limit(pageSize);
-  return data.toString();
+  let data = await posts.find().skip(skip).limit(pageSize);
+
+  data = data.map((x) => {
+    x._doc._id = x._doc._id.toString();
+    return x;
+  });
+
+  return data;
 };
 
 const getPostbyID = async (postID) => {
   errorHandling.checkStringObjectId(postID, "Post ID");
-  const data = await posts.find({ _id: ObjectId(postID) });
-  if (data.length === 0) {
+  const data = await posts.findOne({ _id: ObjectId(postID) });
+  if (data === undefined) {
     throw "Cannot find a post with the given ID: " + postID;
   }
-  return data.toString();
+
+  data._doc._id = data._doc._id.toString();
+
+  return data;
 };
 
 const editDescription = async (postID, description, userID) => {
@@ -101,7 +126,7 @@ const editDescription = async (postID, description, userID) => {
   errorHandling.checkStringObjectId(userID, "User ID");
 
   const data = await posts.updateOne(
-    { _id: ObjectId(postID), userPosted: ObjectId(userID) },
+    { _id: ObjectId(postID), userPosted: userID },
     {
       description: description,
     }
@@ -110,6 +135,7 @@ const editDescription = async (postID, description, userID) => {
   if (data.modifiedCount == 0) {
     throw "Cannot update the description of post";
   }
+  return await getPostbyID(postID);
 };
 
 const addTagsToPost = async (postID, tags, userID) => {
@@ -118,7 +144,7 @@ const addTagsToPost = async (postID, tags, userID) => {
   errorHandling.checkStringObjectId(userID, "User ID");
 
   const data = await posts.updateOne(
-    { _id: ObjectId(postID), userPosted: ObjectId(userID) },
+    { _id: ObjectId(postID), userPosted: userID },
     {
       $addToSet: {
         tags: { $each: tags },
@@ -128,6 +154,8 @@ const addTagsToPost = async (postID, tags, userID) => {
   if (data.modifiedCount == 0) {
     throw "Not Authorized to add a tag";
   }
+
+  return await getPostbyID(postID);
 };
 
 const removeTagsFromPost = async (postID, tags, userID) => {
@@ -136,7 +164,7 @@ const removeTagsFromPost = async (postID, tags, userID) => {
   errorHandling.checkStringObjectId(userID, "User ID");
 
   const data = await posts.updateOne(
-    { _id: ObjectId(postID), userPosted: ObjectId(userID) },
+    { _id: ObjectId(postID), userPosted: userID },
     {
       $pullAll: {
         tags: tags,
@@ -147,6 +175,7 @@ const removeTagsFromPost = async (postID, tags, userID) => {
   if (data.modifiedCount == 0) {
     throw "Not Authorized to remove a tag";
   }
+  return await getPostbyID(postID);
 };
 
 const userUpVotedPost = async (postID, userID) => {
@@ -157,16 +186,18 @@ const userUpVotedPost = async (postID, userID) => {
     { _id: ObjectId(postID) },
     {
       $addToSet: {
-        usersUpvoted: ObjectId(userID),
+        usersUpvoted: userID,
       },
       $pullAll: {
-        usersDownvoted: [ObjectId(userID)],
+        usersDownvoted: [userID],
       },
     }
   );
   if (data.modifiedCount == 0) {
     throw "Cannot up vote a post with ID: " + postID;
   }
+
+  return await getPostbyID(postID);
 };
 
 const userDownVotedPost = async (postID, userID) => {
@@ -177,10 +208,10 @@ const userDownVotedPost = async (postID, userID) => {
     { _id: ObjectId(postID) },
     {
       $addToSet: {
-        usersDownvoted: ObjectId(userID),
+        usersDownvoted: userID,
       },
       $pullAll: {
-        usersUpvoted: [ObjectId(userID)],
+        usersUpvoted: [userID],
       },
     }
   );
@@ -188,6 +219,8 @@ const userDownVotedPost = async (postID, userID) => {
   if (data.modifiedCount == 0) {
     throw "Cannot down vote a post with ID: " + postID;
   }
+
+  return await getPostbyID(postID);
 };
 
 const filterPosts = async (tagsToFilter, pageSize = 10, pageNum = 1) => {
@@ -197,11 +230,17 @@ const filterPosts = async (tagsToFilter, pageSize = 10, pageNum = 1) => {
   if (pageSize < 1) throw "Page size cannot be less than 1";
   tagsToFilter.map((tag) => errorHandling.checkString(tag, "Tag"));
   const skip = pageSize * (pageNum - 1);
-  const data = await posts
+  let data = await posts
     .find({ tags: { $all: tagsToFilter } })
     .skip(skip)
     .limit(pageSize);
-  return data.toString();
+
+  data = data.map((x) => {
+    x._doc._id = x._doc._id.toString();
+    return x;
+  });
+
+  return data;
 };
 
 module.exports = {
@@ -219,6 +258,8 @@ module.exports = {
 };
 
 // Testing
+
+//getAndSortPosts(20, 1).then((x) => console.log(x));
 
 // addReplytoPost("61a15b2db890e3dd124a4259", "61a15b2da890e3dd124a4258");
 // deletePost("61a19b59583a2ab211d4b383", "61a19b59583a2ab211d4b382");
@@ -259,4 +300,4 @@ module.exports = {
 //   console.log(x);
 // });
 
-// getPostbyID("61a0251aca0d7960a313b994").then((x) => console.log(x));
+// getPostbyID("619f21f0c02634027037096f").then((x) => console.log(x));
