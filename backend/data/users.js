@@ -32,9 +32,11 @@ const addUser = async (firstname, lastname, username, email, password) => {
     userPosts: [],
   });
 
-  const addedInfo = user.save();
+  const addedInfo = await user.save();
 
-  return user.toString();
+  user._doc._id = user._doc._id.toString();
+
+  return user;
 };
 
 const editUserProfile = async (userID, updateParams) => {
@@ -59,9 +61,15 @@ const editUserProfile = async (userID, updateParams) => {
 
   if (updateParams.email) {
     errorHandling.checkEmail(updateParams.email, "Email");
-    const existingData = await users.find({ email: updateParams.email });
-    if (existingData.length > 0) {
-      throw "Couldn't update your profile information. Email ID already exists. Try with an another email.";
+
+    const usersData = await getUserbyID(userID);
+
+    if (usersData.email !== updateParams.email) {
+      const existingData = await users.find({ email: updateParams.email });
+
+      if (existingData.length > 0) {
+        throw "Couldn't update your profile information. Email ID already exists. Try with an another email.";
+      }
     }
     doesParametersExist = true;
   }
@@ -77,10 +85,11 @@ const editUserProfile = async (userID, updateParams) => {
 
   const data = await users.updateOne({ _id: ObjectId(userID) }, updateParams);
 
-  if (data.modifiedCount == 0) {
+  if (data.matchedCount == 0) {
     throw "Cannot edit the user profile.";
   }
-  return data.toString();
+
+  return await getUserbyID(userID);
 };
 
 const userAction = async (userID, actionName, postID) => {
@@ -94,7 +103,7 @@ const userAction = async (userID, actionName, postID) => {
       { _id: ObjectId(userID) },
       {
         $addToSet: {
-          userPosts: ObjectId(postID),
+          userPosts: postID,
         },
       }
     );
@@ -103,10 +112,10 @@ const userAction = async (userID, actionName, postID) => {
       { _id: ObjectId(userID) },
       {
         $addToSet: {
-          userUpvotedPosts: ObjectId(postID),
+          userUpvotedPosts: postID,
         },
         $pullAll: {
-          userDownvotedPosts: [ObjectId(postID)],
+          userDownvotedPosts: [postID],
         },
       }
     );
@@ -115,10 +124,10 @@ const userAction = async (userID, actionName, postID) => {
       { _id: ObjectId(userID) },
       {
         $addToSet: {
-          userDownvotedPosts: ObjectId(postID),
+          userDownvotedPosts: postID,
         },
         $pullAll: {
-          userUpvotedPosts: [ObjectId(postID)],
+          userUpvotedPosts: [postID],
         },
       }
     );
@@ -127,9 +136,9 @@ const userAction = async (userID, actionName, postID) => {
       { _id: ObjectId(userID) },
       {
         $pullAll: {
-          userPosts: [ObjectId(postID)],
-          userUpvotedPosts: [ObjectId(postID)],
-          userDownvotedPosts: [ObjectId(postID)],
+          userPosts: [postID],
+          userUpvotedPosts: [postID],
+          userDownvotedPosts: [postID],
         },
       }
     );
@@ -140,15 +149,17 @@ const userAction = async (userID, actionName, postID) => {
   if (data.modifiedCount == 0) {
     throw "Cannot modify the data with " + actionName;
   }
+
+  return await getUserbyID(userID);
 };
 
 const getUserbyID = async (userID) => {
   errorHandling.checkStringObjectId(userID, "User ID");
-  const data = await users.find({ _id: ObjectId(userID) });
-  if (data.length === 0) {
+  const data = await users.findOne({ _id: ObjectId(userID) });
+  if (data === undefined) {
     throw "Cannot find a user with the given ID: " + userID;
   }
-  return data.toString();
+  return { ...data._doc, _id: data._id.toString() };
 };
 
 module.exports = {
@@ -157,3 +168,11 @@ module.exports = {
   userAction,
   getUserbyID,
 };
+
+// Testing
+
+// editUserProfile("61a185e3ed081118e6cd23c3", {
+//   email: "hpalla1@stvens.edu",
+// }).then((x) => {
+//   console.log(x);
+// });
