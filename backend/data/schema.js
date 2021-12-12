@@ -10,10 +10,11 @@ const postsCollection = mongoose.model("Posts", {
   description: String,
   date: { type: Date, default: Date.now },
   tags: [String],
-  usersUpvoted: [ObjectId],
-  usersDownvoted: [ObjectId],
+  usersUpvoted: [String],
+  usersDownvoted: [String],
   isReply: Boolean,
-  replies: [ObjectId],
+  replies: [String],
+  parentPost: String,
 });
 
 const usersCollection = mongoose.model("Users", {
@@ -22,9 +23,9 @@ const usersCollection = mongoose.model("Users", {
   username: String,
   email: String,
   password: String,
-  userUpvotedPosts: [ObjectId],
-  userDownvotedPosts: [ObjectId],
-  userPosts: [ObjectId],
+  userUpvotedPosts: [String],
+  userDownvotedPosts: [String],
+  userPosts: [String],
 });
 
 module.exports = {
