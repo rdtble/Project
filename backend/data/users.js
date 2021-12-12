@@ -1,6 +1,12 @@
 const users = require("./schema").usersCollection;
 const errorHandling = require("./errors");
 const { ObjectId } = require("mongodb");
+const bluebird = require('bluebird');
+const redis = require ('redis');
+const client = redis.createClient();
+bluebird.promisifyAll(redis.RedisClient.prototype)
+bluebird.promisifyAll(redis.Multi.prototype)
+
 
 const addUser = async (firstname, lastname, username, email, password) => {
   errorHandling.checkString(firstname, "First Name");
@@ -33,6 +39,10 @@ const addUser = async (firstname, lastname, username, email, password) => {
   });
 
   const addedInfo = await user.save();
+  existingData = await users.find({ username: user.username.toLowerCase() });
+  if(existingData.length>0){
+    await client.hsetAsync('User',user.username.toString(),JSON.stringify(user)); 
+  }
 
   user._doc._id = user._doc._id.toString();
 
@@ -88,8 +98,20 @@ const editUserProfile = async (userID, updateParams) => {
   if (data.matchedCount == 0) {
     throw "Cannot edit the user profile.";
   }
-
-  return await getUserbyID(userID);
+  const user = await getUserbyID(userID) 
+  let userData = {
+    _id : userID,
+    username : user[0].username,
+    firstname : user[0].firstname,
+    lastname : user[0].lastname,
+    email : user[0].email,
+    password : user[0].password,
+    userPosts : user[0].userPosts,
+    userUpvotedPosts : user[0].userUpvotedPosts,
+    userDownvotedPosts : user[0].userDownvotedPosts
+  }
+  await client.hsetAsync('User',userData.username.toString(),JSON.stringify(userData));
+  return user;
 };
 
 const userAction = async (userID, actionName, postID) => {
