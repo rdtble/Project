@@ -1,10 +1,30 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import ReactMde from 'react-mde';
+import ReactMarkdown from 'react-markdown';
+import moment from 'moment';
+import { useQuery } from '@apollo/client';
 import { useNavigate } from 'react-router';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import './App.css';
-import { AppBar, Button, Stack, TextField, Toolbar } from '@mui/material';
+import 'react-mde/lib/styles/css/react-mde-all.css';
+import {
+	AppBar,
+	Button,
+	Card,
+	Chip,
+	Fab,
+	Grid,
+	Stack,
+	TextField,
+	Toolbar,
+	Tooltip,
+} from '@mui/material';
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import EditIcon from '@mui/icons-material/Edit';
 import { useState } from 'react';
+import { GET_POSTS } from './queries';
 
 function App() {
 	return (
@@ -14,6 +34,7 @@ function App() {
 					<Route path='/' element={<HomePage />} />
 					<Route path='/login' element={<LoginPage />} />
 					<Route path='/register' element={<RegisterPage />} />
+					<Route path='/create-post' element={<CreatePostPage />} />
 				</Routes>
 			</Router>
 		</div>
@@ -66,11 +87,117 @@ const Navbar = () => {
 };
 
 const HomePage = () => {
+	const navigate = useNavigate();
+	const handleNavigation = (path) => {
+		navigate(path);
+	};
+
+	const { data, error, loading } = useQuery(GET_POSTS, {
+		fetchPolicy: 'network-only',
+	});
+
+	if (loading) {
+		return <Layout>Loading...</Layout>;
+	}
+
+	if (error) {
+		return <Layout>{error.message}</Layout>;
+	}
+
+	if (data) {
+		const { getPosts } = data;
+
+		return (
+			<Layout>
+				<Grid container direction='column' gap={4}>
+					{getPosts.map((post) => (
+						<Grid item key={post._id}>
+							<Card sx={{ paddingY: 4, paddingX: 2 }}>
+								<Stack direction='row' gap={3}>
+									<Stack direction='column'>
+										<Stack>
+											<Tooltip
+												title='Upvote'
+												placement='left'>
+												<ArrowUpwardIcon />
+											</Tooltip>
+										</Stack>
+										<Stack>
+											<Tooltip
+												title='Downvote'
+												placement='left'>
+												<ArrowDownwardIcon />
+											</Tooltip>
+										</Stack>
+									</Stack>
+
+									<Stack>
+										<Typography component='h2' variant='h4'>
+											{post.title}
+										</Typography>
+
+										<Tooltip
+											title={moment(
+												Number(post.date)
+											).format(
+												'Do MMM, YYYY (hh:mm:ss a)'
+											)}
+											arrow>
+											<Typography
+												component='p'
+												variant='overline'>
+												{moment(
+													Number(post.date)
+												).fromNow()}
+											</Typography>
+										</Tooltip>
+
+										<Typography
+											component='p'
+											variant='body1'>
+											{post.description}
+										</Typography>
+
+										<Chip label={post.tags[0]} />
+									</Stack>
+								</Stack>
+							</Card>
+						</Grid>
+					))}
+				</Grid>
+
+				<Fab
+					variant='extended'
+					sx={{ position: 'fixed', bottom: 16, right: 16 }}
+					onClick={() => handleNavigation('/create-post')}>
+					<EditIcon sx={{ mr: 1 }} />
+					Create Post
+				</Fab>
+			</Layout>
+		);
+	}
+};
+
+const CreatePostPage = () => {
+	const [value, setValue] = useState('');
+	const [selectedTab, setSelectedTab] = useState('write');
+
 	return (
 		<Layout>
-			<Typography component='h1' variant='h3'>
-				Home page here
-			</Typography>
+			<ReactMde
+				value={value}
+				onChange={setValue}
+				selectedTab={selectedTab}
+				onTabChange={setSelectedTab}
+				generateMarkdownPreview={(markdown) =>
+					Promise.resolve(<ReactMarkdown children={markdown} />)
+				}
+				childProps={{
+					writeButton: {
+						tabIndex: -1,
+					},
+				}}
+			/>
 		</Layout>
 	);
 };

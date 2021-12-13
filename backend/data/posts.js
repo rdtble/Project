@@ -1,6 +1,11 @@
 const posts = require("./schema").postsCollection;
 const errorHandling = require("./errors");
 const { ObjectId } = require("mongodb");
+const bluebird = require('bluebird');
+const redis = require ('redis');
+const client = redis.createClient();
+bluebird.promisifyAll(redis.RedisClient.prototype)
+bluebird.promisifyAll(redis.Multi.prototype)
 
 const addPost = async (
   userID,
@@ -38,9 +43,11 @@ const addPost = async (
     parentPost: parentPost,
   });
   const addedInfo = await post.save();
-
+  existingData = await posts.find({title: post.title})
+  if(existingData.length>0){
+    await client.hsetAsync('userPosted',post._id.toString(),JSON.stringify(post)); 
+  }
   post._doc._id = post._doc._id.toString();
-
   return post;
 };
 
@@ -85,6 +92,7 @@ const deletePost = async (postID, userID) => {
   if (data.modifiedCount == 0) {
     throw "Cannot delete the post.";
   }
+  await client.hdelAsync('userPosted',postID) 
 
   return true;
 };
