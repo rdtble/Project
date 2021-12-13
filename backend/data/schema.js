@@ -17,6 +17,8 @@ const postsCollection = mongoose.model("Posts", {
   parentPost: String,
 });
 
+postsCollection.schema.index({ title: "text", description: "text" });
+
 const usersCollection = mongoose.model("Users", {
   firstname: String,
   lastname: String,
