@@ -1,6 +1,11 @@
 const { GraphQLScalarType } = require("graphql");
 
-const { ApolloServer, gql, ApolloError } = require("apollo-server");
+const {
+  ApolloServer,
+  gql,
+  ApolloError,
+  AuthenticationError,
+} = require("apollo-server");
 
 //const redis = require("redis");
 //const bluebird = require("bluebird");
@@ -10,6 +15,7 @@ const uuid = require("uuid");
 
 const userData = require("./data/users");
 const postsData = require("./data/posts");
+const { promisifyAll } = require("bluebird");
 
 const dateScalar = new GraphQLScalarType({
   name: "Date",
@@ -27,43 +33,47 @@ const typeDefs = gql`
   type Query {
     getPost(id: String!): Post
     filterPosts(tags: [String], pageNum: Int, pageSize: Int): [Post]
-    getUser(id: String!): User
+    getUser(optionalParamter: String): User
+    getUserInfo(optionalParameter: String): UserInfo
     getPosts(sortBy: String, pageNum: Int, pageSize: Int): [Post]
+    searchPosts(searchTerm: String!): [Post]
   }
 
   type Post {
     _id: ID!
-    userPosted: String
+    userPosted: User
     title: String
     description: String!
     date: Date!
     tags: [String]
-    usersUpvoted: [String]
-    usersDownvoted: [String]
+    usersUpVoted: [User]
+    usersDownVoted: [User]
     isReply: Boolean
-    replies: [String]
-    parentPost: String
+    replies: [Post]
+    parentPost: Post
+  }
+
+  type UserInfo {
+    firstname: String
+    lastname: String
+    username: ID!
+    email: String
+    userUpVotedPosts: [Post]
+    userDownVotedPosts: [Post]
+    userPosts: [Post]
   }
 
   type User {
-    _id: ID!
-    firstname: String!
-    lastname: String
-    username: String!
-    email: String!
-    userUpvotedPosts: [String]
-    userDownvotedPosts: [String]
-    userPosts: [String]
+    username: ID!
+    userUpVotedPosts: [Post]
+    userDownVotedPosts: [Post]
+    userPosts: [Post]
   }
 
   type Mutation {
-    AddPost(
-      userID: ID!
-      desciption: String!
-      title: String!
-      tags: [String]
-    ): Post
-    AddComment(userID: ID!, desciption: String!, parentPostID: String!): Post
+    signIn(username: String!, password: String!): String
+    AddPost(description: String!, title: String!, tags: [String]): Post
+    AddComment(description: String!, parentPostID: String!): Post
     AddUser(
       firstname: String!
       lastname: String!
@@ -72,18 +82,19 @@ const typeDefs = gql`
       password: String!
     ): User
     EditUser(
-      userID: ID!
       firstname: String
       lastname: String
       email: String
       password: String
     ): User
-    DeletePost(userID: ID!, postID: ID!): Boolean
-    EditDescription(userID: ID!, postID: ID!, desciption: String): Post
-    AddTagsToPost(userID: ID!, postID: ID!, tags: [String]!): Post
-    RemoveTagsToPost(userID: ID!, postID: ID!, tags: [String]!): Post
-    UserUpVotedPost(userID: ID!, postID: ID!): Post
-    UserDownVotedPost(userID: ID!, postID: ID!): Post
+    DeletePost(postID: ID!): Boolean
+    EditDescription(postID: ID!, description: String): Post
+    AddTagsToPost(postID: ID!, tags: [String]!): Post
+    RemoveTagsToPost(postID: ID!, tags: [String]!): Post
+    UserUpVotesAPost(postID: ID!): Post
+    UserRemoveUpVoteFromAPost(postID: ID!): Post
+    UserDownVotesAPost(postID: ID!): Post
+    UserRemoveDownVoteFromAPost(postID: ID!): Post
   }
 `;
 
@@ -112,9 +123,22 @@ let resolvers = {
         throw new ApolloError(e, 400);
       }
     },
+
     getUser: async (_, args) => {
       try {
-        const user = await userData.getUserbyID(args.id);
+        const user = await userData.getUserbyID(args.username);
+        return user;
+      } catch (e) {
+        console.log(e);
+        throw new ApolloError(e, 400);
+      }
+    },
+    getUserInfo: async (_, __, context) => {
+      try {
+        if (context.user === undefined)
+          throw new AuthenticationError("you must be logged in");
+
+        const user = await userData.getUserbyID(context.user);
         return user;
       } catch (e) {
         console.log(e);
@@ -126,9 +150,16 @@ let resolvers = {
         const posts = await postsData.getAndSortPosts(
           args.pageSize,
           args.pageNum,
-          "default"
+          args.sortBy
         );
-        console.log(posts);
+        return posts;
+      } catch (e) {
+        throw new ApolloError(e, 400);
+      }
+    },
+    searchPosts: async (_, args) => {
+      try {
+        const posts = await postsData.searchPosts(args.searchTerm);
         return posts;
       } catch (e) {
         throw new ApolloError(e, 400);
@@ -136,17 +167,194 @@ let resolvers = {
     },
   },
 
-  Mutation: {
-    AddPost: async (_, args) => {
+  Post: {
+    userPosted: async (parentArgs) => {
       try {
+        const user = await userData.getUserbyID(parentArgs.userPosted);
+        return user;
+      } catch (e) {
+        console.log(e);
+        throw new ApolloError(e, 400);
+      }
+    },
+    parentPost: async (parentArgs) => {
+      try {
+        if (parentArgs.parentPost !== null) {
+          const post = await postsData.getPostbyID(parentArgs.parentPost);
+          return post;
+        }
+        const post = await postsData.getPostbyID(parentArgs._id);
+        return post;
+      } catch (e) {
+        console.log(e);
+        throw new ApolloError(e, 400);
+      }
+    },
+    usersUpVoted: async (parentArgs) => {
+      try {
+        let users = parentArgs.usersUpvoted;
+
+        users = users.map(async (userId) => {
+          return await userData.getUserbyID(userId);
+        });
+
+        users = await Promise.all(users);
+
+        return users;
+      } catch (e) {
+        console.log(e);
+        throw new ApolloError(e, 400);
+      }
+    },
+
+    usersDownVoted: async (parentArgs) => {
+      try {
+        let users = parentArgs.usersDownvoted;
+
+        users = users.map(async (userId) => {
+          return await userData.getUserbyID(userId);
+        });
+
+        users = await Promise.all(users);
+
+        return users;
+      } catch (e) {
+        console.log(e);
+        throw new ApolloError(e, 400);
+      }
+    },
+  },
+
+  User: {
+    userPosts: async (parentArgs) => {
+      try {
+        let posts = parentArgs.userPosts;
+
+        posts = posts.map(async (postId) => {
+          return await postsData.getPostbyID(postId);
+        });
+
+        posts = await Promise.all(posts);
+
+        return posts;
+      } catch (e) {
+        console.log(e);
+        throw new ApolloError(e, 400);
+      }
+    },
+    userUpVotedPosts: async (parentArgs) => {
+      try {
+        let posts = parentArgs.userUpvotedPosts;
+
+        posts = posts.map(async (postId) => {
+          return await postsData.getPostbyID(postId);
+        });
+
+        posts = await Promise.all(posts);
+
+        return posts;
+      } catch (e) {
+        console.log(e);
+        throw new ApolloError(e, 400);
+      }
+    },
+
+    userDownVotedPosts: async (parentArgs) => {
+      try {
+        let posts = parentArgs.userDownVotedPosts;
+
+        posts = posts.map(async (postId) => {
+          return await postsData.getPostbyID(postId);
+        });
+
+        posts = await Promise.all(posts);
+
+        return posts;
+      } catch (e) {
+        console.log(e);
+        throw new ApolloError(e, 400);
+      }
+    },
+  },
+
+  UserInfo: {
+    userPosts: async (parentArgs) => {
+      try {
+        let posts = parentArgs.userPosts;
+
+        posts = posts.map(async (postId) => {
+          return await postsData.getPostbyID(postId);
+        });
+
+        posts = await Promise.all(posts);
+
+        return posts;
+      } catch (e) {
+        console.log(e);
+        throw new ApolloError(e, 400);
+      }
+    },
+    userUpVotedPosts: async (parentArgs) => {
+      try {
+        let posts = parentArgs.userUpvotedPosts;
+
+        posts = posts.map(async (postId) => {
+          return await postsData.getPostbyID(postId);
+        });
+
+        posts = await Promise.all(posts);
+
+        return posts;
+      } catch (e) {
+        console.log(e);
+        throw new ApolloError(e, 400);
+      }
+    },
+
+    userDownVotedPosts: async (parentArgs) => {
+      try {
+        let posts = parentArgs.userDownVotedPosts;
+
+        posts = posts.map(async (postId) => {
+          return await postsData.getPostbyID(postId);
+        });
+
+        posts = await Promise.all(posts);
+
+        return posts;
+      } catch (e) {
+        console.log(e);
+        throw new ApolloError(e, 400);
+      }
+    },
+  },
+
+  Mutation: {
+    signIn: async (_, args, context) => {
+      if (context.user === undefined) {
+        const userInfo = await userData.getUserbyUserName(args.username);
+
+        if (userInfo.password === args.password) {
+          context.user = userInfo._id;
+        } else {
+          throw new AuthenticationError("username or password is incorrect");
+        }
+      }
+      return context.user;
+    },
+    AddPost: async (_, args, context) => {
+      try {
+        if (context.user === undefined)
+          throw new AuthenticationError("you must be logged in");
+
         const post = await postsData.addPost(
-          args.userID,
-          args.desciption,
+          context.user,
+          args.description,
           args.tags,
           args.title
         );
         const user = await userData.userAction(
-          args.userID,
+          context.user,
           "userCreatedPost",
           post._id
         );
@@ -155,12 +363,14 @@ let resolvers = {
         throw new ApolloError(e, 400);
       }
     },
-    AddComment: async (_, args) => {
+    AddComment: async (_, args, context) => {
       try {
-        console.log(args.parentPostID);
+        if (context.user === undefined)
+          throw new AuthenticationError("you must be logged in");
+
         const comment = await postsData.addPost(
-          args.userID,
-          args.desciption,
+          context.user,
+          args.description,
           ["comment"],
           "",
           true,
@@ -168,11 +378,10 @@ let resolvers = {
         );
         await postsData.addReplytoPost(args.parentPostID, comment._id);
         const user = await userData.userAction(
-          args.userID,
+          context.user,
           "userCreatedPost",
           comment._id
         );
-        console.log(comment);
         return comment;
       } catch (e) {
         throw new ApolloError(e, 400);
@@ -192,8 +401,11 @@ let resolvers = {
         throw new ApolloError(e, 400);
       }
     },
-    EditUser: async (_, args) => {
+    EditUser: async (_, args, context) => {
       try {
+        if (context.user === undefined)
+          throw new AuthenticationError("you must be logged in");
+
         const updateParams = {};
 
         if (args.firstname !== null) {
@@ -213,21 +425,23 @@ let resolvers = {
         }
 
         const updatedUser = await userData.editUserProfile(
-          args.userID,
+          context.user,
           updateParams
         );
 
-        console.log(updatedUser);
         return updatedUser;
       } catch (e) {
         throw new ApolloError(e, 400);
       }
     },
-    DeletePost: async (_, args) => {
+    DeletePost: async (_, args, context) => {
       try {
-        const post = await postsData.deletePost(args.postID, args.userID);
+        if (context.user === undefined)
+          throw new AuthenticationError("you must be logged in");
+
+        const post = await postsData.deletePost(args.postID, context.user);
         const user = await userData.userAction(
-          args.userID,
+          context.user,
           "userDeletesPost",
           args.postID
         );
@@ -236,47 +450,59 @@ let resolvers = {
         throw new ApolloError(e, 400);
       }
     },
-    EditDescription: async (_, args) => {
+    EditDescription: async (_, args, context) => {
       try {
+        if (context.user === undefined)
+          throw new AuthenticationError("you must be logged in");
+
         const post = await postsData.editDescription(
           args.postID,
-          args.desciption,
-          args.userID
+          args.description,
+          context.user
         );
         return post;
       } catch (e) {
         throw new ApolloError(e, 400);
       }
     },
-    AddTagsToPost: async (_, args) => {
+    AddTagsToPost: async (_, args, context) => {
       try {
+        if (context.user === undefined)
+          throw new AuthenticationError("you must be logged in");
+
         const addTags = await postsData.addTagsToPost(
           args.postID,
           args.tags,
-          args.userID
+          context.user
         );
         return addTags;
       } catch (e) {
         throw new ApolloError(e, 400);
       }
     },
-    RemoveTagsToPost: async (_, args) => {
+    RemoveTagsToPost: async (_, args, context) => {
       try {
+        if (context.user === undefined)
+          throw new AuthenticationError("you must be logged in");
+
         const removeTags = await postsData.removeTagsFromPost(
           args.postID,
           args.tags,
-          args.userID
+          context.user
         );
         return removeTags;
       } catch (e) {
         throw new ApolloError(e, 400);
       }
     },
-    UserUpVotedPost: async (_, args) => {
+    UserUpVotesAPost: async (_, args, context) => {
       try {
-        const post = await postsData.userUpVotedPost(args.postID, args.userID);
+        if (context.user === undefined)
+          throw new AuthenticationError("you must be logged in");
+
+        const post = await postsData.userUpVotedPost(args.postID, context.user);
         const user = await userData.userAction(
-          args.userID,
+          context.user,
           "userUpvotedPost",
           args.postID
         );
@@ -285,15 +511,56 @@ let resolvers = {
         throw new ApolloError(e, 400);
       }
     },
-    UserDownVotedPost: async (_, args) => {
+    UserDownVotesAPost: async (_, args, context) => {
       try {
+        if (context.user === undefined)
+          throw new AuthenticationError("you must be logged in");
+
         const post = await postsData.userDownVotedPost(
           args.postID,
-          args.userID
+          context.user
         );
         const user = await userData.userAction(
-          args.userID,
+          context.user,
           "userDownvotedPost",
+          args.postID
+        );
+        return post;
+      } catch (e) {
+        throw new ApolloError(e, 400);
+      }
+    },
+    UserRemoveUpVoteFromAPost: async (_, args, context) => {
+      try {
+        if (context.user === undefined)
+          throw new AuthenticationError("you must be logged in");
+
+        const post = await postsData.userRemoveUpVotedPost(
+          args.postID,
+          context.user
+        );
+        const user = await userData.userAction(
+          context.user,
+          "userRemoveUpvotedPost",
+          args.postID
+        );
+        return post;
+      } catch (e) {
+        throw new ApolloError(e, 400);
+      }
+    },
+    UserRemoveDownVoteFromAPost: async (_, args, context) => {
+      try {
+        if (context.user === undefined)
+          throw new AuthenticationError("you must be logged in");
+
+        const post = await postsData.userRemoveDownVotedPost(
+          args.postID,
+          context.user
+        );
+        const user = await userData.userAction(
+          context.user,
+          "userRemoveDownVotedPost",
           args.postID
         );
         return post;
@@ -304,7 +571,13 @@ let resolvers = {
   },
 };
 
-const server = new ApolloServer({ typeDefs, resolvers });
+const server = new ApolloServer({
+  typeDefs,
+  resolvers,
+  context: async ({ req }) => {
+    return { user: req.headers.authorization };
+  },
+});
 
 server.listen().then(({ url }) => {
   console.log(`Server running at ${url}`);
