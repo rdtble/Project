@@ -1,11 +1,11 @@
 const posts = require("./schema").postsCollection;
 const errorHandling = require("./errors");
 const { ObjectId } = require("mongodb");
-const bluebird = require('bluebird');
-const redis = require ('redis');
+const bluebird = require("bluebird");
+const redis = require("redis");
 const client = redis.createClient();
-bluebird.promisifyAll(redis.RedisClient.prototype)
-bluebird.promisifyAll(redis.Multi.prototype)
+bluebird.promisifyAll(redis.RedisClient.prototype);
+bluebird.promisifyAll(redis.Multi.prototype);
 
 const addPost = async (
   userID,
@@ -43,9 +43,13 @@ const addPost = async (
     parentPost: parentPost,
   });
   const addedInfo = await post.save();
-  existingData = await posts.find({title: post.title})
-  if(existingData.length>0){
-    await client.hsetAsync('userPosted',post._id.toString(),JSON.stringify(post)); 
+  existingData = await posts.find({ title: post.title });
+  if (existingData.length > 0) {
+    await client.hsetAsync(
+      "userPosted",
+      post._id.toString(),
+      JSON.stringify(post)
+    );
   }
   post._doc._id = post._doc._id.toString();
   return post;
@@ -92,7 +96,7 @@ const deletePost = async (postID, userID) => {
   if (data.modifiedCount == 0) {
     throw "Cannot delete the post.";
   }
-  await client.hdelAsync('userPosted',postID) 
+  await client.hdelAsync("userPosted", postID);
 
   return true;
 };
@@ -106,7 +110,32 @@ const getAndSortPosts = async (pageSize, pageNum, sortBy = "default") => {
   if (pageSize < 1) throw "Page size cannot be less than 1";
 
   const skip = pageSize * (pageNum - 1);
-  let data = await posts.find().skip(skip).limit(pageSize);
+
+  let data = null;
+
+  if (sortBy === "default") {
+    data = await posts.find({ isReply: false }).skip(skip).limit(pageSize);
+  } else if (sortBy === "time") {
+    data = await posts
+      .find({ isReply: false })
+      .sort({ date: -1 })
+      .skip(skip)
+      .limit(pageSize);
+  } else if (sortBy === "upvotes") {
+    data = await posts
+      .find({ isReply: false })
+      .sort({ usersUpvoted: -1 })
+      .skip(skip)
+      .limit(pageSize);
+  } else if (sortBy === "downvotes") {
+    data = await posts
+      .find({ isReply: false })
+      .sort({ usersDownvoted: -1 })
+      .skip(skip)
+      .limit(pageSize);
+  } else {
+    throw "invalid sortby parameter. Sort By parameter can either be time, upvotes, downvotes, default";
+  }
 
   data = data.map((x) => {
     x._doc._id = x._doc._id.toString();
@@ -151,6 +180,8 @@ const addTagsToPost = async (postID, tags, userID) => {
   tags.map((tag) => errorHandling.checkString(tag, "Tag"));
   errorHandling.checkStringObjectId(userID, "User ID");
 
+  tags = tags.map((x) => x.toLowerCase());
+
   const data = await posts.updateOne(
     { _id: ObjectId(postID), userPosted: userID },
     {
@@ -171,6 +202,8 @@ const removeTagsFromPost = async (postID, tags, userID) => {
   tags.map((tag) => errorHandling.checkString(tag, "Tag"));
   errorHandling.checkStringObjectId(userID, "User ID");
 
+  tags = tags.map((x) => x.toLowerCase());
+
   const data = await posts.updateOne(
     { _id: ObjectId(postID), userPosted: userID },
     {
@@ -184,6 +217,18 @@ const removeTagsFromPost = async (postID, tags, userID) => {
     throw "Not Authorized to remove a tag";
   }
   return await getPostbyID(postID);
+};
+
+const searchPosts = async (searchTerm) => {
+  errorHandling.checkString(searchTerm, "Search Term");
+
+  const postsList = await posts.find({
+    $text: {
+      $search: searchTerm,
+    },
+  });
+
+  return postsList;
 };
 
 const userUpVotedPost = async (postID, userID) => {
@@ -203,6 +248,44 @@ const userUpVotedPost = async (postID, userID) => {
   );
   if (data.modifiedCount == 0) {
     throw "Cannot up vote a post with ID: " + postID;
+  }
+
+  return await getPostbyID(postID);
+};
+
+const userRemoveUpVotedPost = async (postID, userID) => {
+  errorHandling.checkStringObjectId(postID, "Post ID");
+  errorHandling.checkStringObjectId(userID, "User ID");
+
+  const data = await posts.updateOne(
+    { _id: ObjectId(postID) },
+    {
+      $pullAll: {
+        usersUpvoted: [userID],
+      },
+    }
+  );
+  if (data.modifiedCount == 0) {
+    throw "Cannot remove upvote from a post with ID: " + postID;
+  }
+
+  return await getPostbyID(postID);
+};
+
+const userRemoveDownVotedPost = async (postID, userID) => {
+  errorHandling.checkStringObjectId(postID, "Post ID");
+  errorHandling.checkStringObjectId(userID, "User ID");
+
+  const data = await posts.updateOne(
+    { _id: ObjectId(postID) },
+    {
+      $pullAll: {
+        usersDownvoted: [userID],
+      },
+    }
+  );
+  if (data.modifiedCount == 0) {
+    throw "Cannot remove upvote from a post with ID: " + postID;
   }
 
   return await getPostbyID(postID);
@@ -237,6 +320,8 @@ const filterPosts = async (tagsToFilter, pageSize = 10, pageNum = 1) => {
   if (pageNum < 1) throw "Page number cannot be less than 1";
   if (pageSize < 1) throw "Page size cannot be less than 1";
   tagsToFilter.map((tag) => errorHandling.checkString(tag, "Tag"));
+  tagsToFilter = tagsToFilter.map((x) => x.toLowerCase());
+
   const skip = pageSize * (pageNum - 1);
   let data = await posts
     .find({ tags: { $all: tagsToFilter } })
@@ -263,6 +348,9 @@ module.exports = {
   filterPosts,
   addReplytoPost,
   deletePost,
+  userRemoveUpVotedPost,
+  userRemoveDownVotedPost,
+  searchPosts,
 };
 
 // Testing

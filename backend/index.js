@@ -15,6 +15,7 @@ const uuid = require("uuid");
 
 const userData = require("./data/users");
 const postsData = require("./data/posts");
+const { promisifyAll } = require("bluebird");
 
 const dateScalar = new GraphQLScalarType({
   name: "Date",
@@ -32,39 +33,47 @@ const typeDefs = gql`
   type Query {
     getPost(id: String!): Post
     filterPosts(tags: [String], pageNum: Int, pageSize: Int): [Post]
-    getUser(id: String!): User
+    getUser(optionalParamter: String): User
+    getUserInfo(optionalParameter: String): UserInfo
     getPosts(sortBy: String, pageNum: Int, pageSize: Int): [Post]
+    searchPosts(searchTerm: String!): [Post]
   }
 
   type Post {
     _id: ID!
-    userPosted: String
+    userPosted: User
     title: String
     description: String!
     date: Date!
     tags: [String]
-    usersUpvoted: [String]
-    usersDownvoted: [String]
+    usersUpVoted: [User]
+    usersDownVoted: [User]
     isReply: Boolean
-    replies: [String]
-    parentPost: String
+    replies: [Post]
+    parentPost: Post
+  }
+
+  type UserInfo {
+    firstname: String
+    lastname: String
+    username: ID!
+    email: String
+    userUpVotedPosts: [Post]
+    userDownVotedPosts: [Post]
+    userPosts: [Post]
   }
 
   type User {
-    _id: ID!
-    firstname: String!
-    lastname: String
-    username: String!
-    email: String!
-    userUpvotedPosts: [String]
-    userDownvotedPosts: [String]
-    userPosts: [String]
+    username: ID!
+    userUpVotedPosts: [Post]
+    userDownVotedPosts: [Post]
+    userPosts: [Post]
   }
 
   type Mutation {
     signIn(username: String!, password: String!): String
-    AddPost(desciption: String!, title: String!, tags: [String]): Post
-    AddComment(desciption: String!, parentPostID: String!): Post
+    AddPost(description: String!, title: String!, tags: [String]): Post
+    AddComment(description: String!, parentPostID: String!): Post
     AddUser(
       firstname: String!
       lastname: String!
@@ -79,11 +88,13 @@ const typeDefs = gql`
       password: String
     ): User
     DeletePost(postID: ID!): Boolean
-    EditDescription(postID: ID!, desciption: String): Post
+    EditDescription(postID: ID!, description: String): Post
     AddTagsToPost(postID: ID!, tags: [String]!): Post
     RemoveTagsToPost(postID: ID!, tags: [String]!): Post
-    UserUpVotedPost(postID: ID!): Post
-    UserDownVotedPost(postID: ID!): Post
+    UserUpVotesAPost(postID: ID!): Post
+    UserRemoveUpVoteFromAPost(postID: ID!): Post
+    UserDownVotesAPost(postID: ID!): Post
+    UserRemoveDownVoteFromAPost(postID: ID!): Post
   }
 `;
 
@@ -112,7 +123,17 @@ let resolvers = {
         throw new ApolloError(e, 400);
       }
     },
-    getUser: async (_, __, context) => {
+
+    getUser: async (_, args) => {
+      try {
+        const user = await userData.getUserbyID(args.username);
+        return user;
+      } catch (e) {
+        console.log(e);
+        throw new ApolloError(e, 400);
+      }
+    },
+    getUserInfo: async (_, __, context) => {
       try {
         if (context.user === undefined)
           throw new AuthenticationError("you must be logged in");
@@ -129,11 +150,180 @@ let resolvers = {
         const posts = await postsData.getAndSortPosts(
           args.pageSize,
           args.pageNum,
-          "default"
+          args.sortBy
         );
-        console.log(posts);
         return posts;
       } catch (e) {
+        throw new ApolloError(e, 400);
+      }
+    },
+    searchPosts: async (_, args) => {
+      try {
+        const posts = await postsData.searchPosts(args.searchTerm);
+        return posts;
+      } catch (e) {
+        throw new ApolloError(e, 400);
+      }
+    },
+  },
+
+  Post: {
+    userPosted: async (parentArgs) => {
+      try {
+        const user = await userData.getUserbyID(parentArgs.userPosted);
+        return user;
+      } catch (e) {
+        console.log(e);
+        throw new ApolloError(e, 400);
+      }
+    },
+    parentPost: async (parentArgs) => {
+      try {
+        if (parentArgs.parentPost !== null) {
+          const post = await postsData.getPostbyID(parentArgs.parentPost);
+          return post;
+        }
+        const post = await postsData.getPostbyID(parentArgs._id);
+        return post;
+      } catch (e) {
+        console.log(e);
+        throw new ApolloError(e, 400);
+      }
+    },
+    usersUpVoted: async (parentArgs) => {
+      try {
+        let users = parentArgs.usersUpvoted;
+
+        users = users.map(async (userId) => {
+          return await userData.getUserbyID(userId);
+        });
+
+        users = await Promise.all(users);
+
+        return users;
+      } catch (e) {
+        console.log(e);
+        throw new ApolloError(e, 400);
+      }
+    },
+
+    usersDownVoted: async (parentArgs) => {
+      try {
+        let users = parentArgs.usersDownvoted;
+
+        users = users.map(async (userId) => {
+          return await userData.getUserbyID(userId);
+        });
+
+        users = await Promise.all(users);
+
+        return users;
+      } catch (e) {
+        console.log(e);
+        throw new ApolloError(e, 400);
+      }
+    },
+  },
+
+  User: {
+    userPosts: async (parentArgs) => {
+      try {
+        let posts = parentArgs.userPosts;
+
+        posts = posts.map(async (postId) => {
+          return await postsData.getPostbyID(postId);
+        });
+
+        posts = await Promise.all(posts);
+
+        return posts;
+      } catch (e) {
+        console.log(e);
+        throw new ApolloError(e, 400);
+      }
+    },
+    userUpVotedPosts: async (parentArgs) => {
+      try {
+        let posts = parentArgs.userUpvotedPosts;
+
+        posts = posts.map(async (postId) => {
+          return await postsData.getPostbyID(postId);
+        });
+
+        posts = await Promise.all(posts);
+
+        return posts;
+      } catch (e) {
+        console.log(e);
+        throw new ApolloError(e, 400);
+      }
+    },
+
+    userDownVotedPosts: async (parentArgs) => {
+      try {
+        let posts = parentArgs.userDownVotedPosts;
+
+        posts = posts.map(async (postId) => {
+          return await postsData.getPostbyID(postId);
+        });
+
+        posts = await Promise.all(posts);
+
+        return posts;
+      } catch (e) {
+        console.log(e);
+        throw new ApolloError(e, 400);
+      }
+    },
+  },
+
+  UserInfo: {
+    userPosts: async (parentArgs) => {
+      try {
+        let posts = parentArgs.userPosts;
+
+        posts = posts.map(async (postId) => {
+          return await postsData.getPostbyID(postId);
+        });
+
+        posts = await Promise.all(posts);
+
+        return posts;
+      } catch (e) {
+        console.log(e);
+        throw new ApolloError(e, 400);
+      }
+    },
+    userUpVotedPosts: async (parentArgs) => {
+      try {
+        let posts = parentArgs.userUpvotedPosts;
+
+        posts = posts.map(async (postId) => {
+          return await postsData.getPostbyID(postId);
+        });
+
+        posts = await Promise.all(posts);
+
+        return posts;
+      } catch (e) {
+        console.log(e);
+        throw new ApolloError(e, 400);
+      }
+    },
+
+    userDownVotedPosts: async (parentArgs) => {
+      try {
+        let posts = parentArgs.userDownVotedPosts;
+
+        posts = posts.map(async (postId) => {
+          return await postsData.getPostbyID(postId);
+        });
+
+        posts = await Promise.all(posts);
+
+        return posts;
+      } catch (e) {
+        console.log(e);
         throw new ApolloError(e, 400);
       }
     },
@@ -159,7 +349,7 @@ let resolvers = {
 
         const post = await postsData.addPost(
           context.user,
-          args.desciption,
+          args.description,
           args.tags,
           args.title
         );
@@ -180,7 +370,7 @@ let resolvers = {
 
         const comment = await postsData.addPost(
           context.user,
-          args.desciption,
+          args.description,
           ["comment"],
           "",
           true,
@@ -192,7 +382,6 @@ let resolvers = {
           "userCreatedPost",
           comment._id
         );
-        console.log(comment);
         return comment;
       } catch (e) {
         throw new ApolloError(e, 400);
@@ -268,7 +457,7 @@ let resolvers = {
 
         const post = await postsData.editDescription(
           args.postID,
-          args.desciption,
+          args.description,
           context.user
         );
         return post;
@@ -306,7 +495,7 @@ let resolvers = {
         throw new ApolloError(e, 400);
       }
     },
-    UserUpVotedPost: async (_, args, context) => {
+    UserUpVotesAPost: async (_, args, context) => {
       try {
         if (context.user === undefined)
           throw new AuthenticationError("you must be logged in");
@@ -322,7 +511,7 @@ let resolvers = {
         throw new ApolloError(e, 400);
       }
     },
-    UserDownVotedPost: async (_, args, context) => {
+    UserDownVotesAPost: async (_, args, context) => {
       try {
         if (context.user === undefined)
           throw new AuthenticationError("you must be logged in");
@@ -334,6 +523,44 @@ let resolvers = {
         const user = await userData.userAction(
           context.user,
           "userDownvotedPost",
+          args.postID
+        );
+        return post;
+      } catch (e) {
+        throw new ApolloError(e, 400);
+      }
+    },
+    UserRemoveUpVoteFromAPost: async (_, args, context) => {
+      try {
+        if (context.user === undefined)
+          throw new AuthenticationError("you must be logged in");
+
+        const post = await postsData.userRemoveUpVotedPost(
+          args.postID,
+          context.user
+        );
+        const user = await userData.userAction(
+          context.user,
+          "userRemoveUpvotedPost",
+          args.postID
+        );
+        return post;
+      } catch (e) {
+        throw new ApolloError(e, 400);
+      }
+    },
+    UserRemoveDownVoteFromAPost: async (_, args, context) => {
+      try {
+        if (context.user === undefined)
+          throw new AuthenticationError("you must be logged in");
+
+        const post = await postsData.userRemoveDownVotedPost(
+          args.postID,
+          context.user
+        );
+        const user = await userData.userAction(
+          context.user,
+          "userRemoveDownVotedPost",
           args.postID
         );
         return post;
