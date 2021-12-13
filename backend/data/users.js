@@ -162,11 +162,21 @@ const getUserbyID = async (userID) => {
   return { ...data._doc, _id: data._id.toString() };
 };
 
+const getUserbyUserName = async (username) => {
+  errorHandling.checkString(username, "username");
+  const data = await users.findOne({ username: username });
+  if (data.matchedCount == 0) {
+    throw "Cannot find a user with the given username " + userID;
+  }
+  return { ...data._doc, _id: data._id.toString() };
+};
+
 module.exports = {
   addUser,
   editUserProfile,
   userAction,
   getUserbyID,
+  getUserbyUserName,
 };
 
 // Testing
