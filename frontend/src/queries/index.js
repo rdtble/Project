@@ -8,11 +8,7 @@ const GET_POSTS = gql`
 			description
 			date
 			tags
-			usersUpvoted
-			usersDownvoted
 			isReply
-			replies
-			parentPost
 		}
 	}
 `;
