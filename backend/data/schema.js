@@ -2,7 +2,7 @@ const { ObjectId } = require("mongodb");
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
-mongoose.connect("mongodb://localhost:27017/RoundTable");
+mongoose.connect("mongodb+srv://roundtable:roundtable@cluster0.j8soz.mongodb.net/RoundTable?retryWrites=true&w=majority");
 
 const postsCollection = mongoose.model("Posts", {
   userPosted: Schema.Types.Mixed,

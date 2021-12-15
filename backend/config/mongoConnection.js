@@ -1,7 +1,7 @@
 const MongoClient = require('mongodb').MongoClient;
 const settings = {
     mongoConfig: {
-        serverUrl: 'mongodb://localhost:27017/',
+        serverUrl: 'mongodb+srv://roundtable:roundtable@cluster0.j8soz.mongodb.net/RoundTable?retryWrites=true&w=majority',
         database: 'Round-Table'
 
     }
