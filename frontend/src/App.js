@@ -27,6 +27,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import { useState } from 'react';
 import { ADD_POST, GET_POSTS } from './queries';
 
+// TODO: Add toasts to show status/errors
 function App() {
 	return (
 		<div>
@@ -114,6 +115,11 @@ const HomePage = () => {
 		return (
 			<Layout>
 				<Grid container direction='column' gap={4}>
+					{getPosts.length === 0 && (
+						<Typography component='h2' variant='h5'>
+							No posts to show!
+						</Typography>
+					)}
 					{getPosts.map((post) => (
 						<Grid item key={post._id} xs>
 							<Card sx={{ paddingY: 4, paddingX: 2 }}>
