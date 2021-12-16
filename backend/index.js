@@ -65,7 +65,7 @@ const typeDefs = gql`
 
 	type Mutation {
 		signIn(username: String!, password: String!): String
-		AddPost(description: String!, title: String!, tags: [String]!): Post
+		AddPost(description: String!, title: String!, tags: [String]): Post
 		AddComment(description: String!, parentPostID: String!): Post
 		AddUser(
 			firstname: String!
