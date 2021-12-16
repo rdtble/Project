@@ -16,6 +16,7 @@ const uuid = require("uuid");
 const userData = require("./data/users");
 const postsData = require("./data/posts");
 const { promisifyAll } = require("bluebird");
+const async = require("seed/lib/seed/base/async");
 
 const dateScalar = new GraphQLScalarType({
   name: "Date",
@@ -218,6 +219,23 @@ let resolvers = {
         users = await Promise.all(users);
 
         return users;
+      } catch (e) {
+        console.log(e);
+        throw new ApolloError(e, 400);
+      }
+    },
+
+    replies: async (parentArgs) => {
+      try {
+        let posts = parentArgs.replies;
+
+        posts = posts.map(async (post) => {
+          return await postsData.getPostbyID(post);
+        });
+
+        posts = await Promise.all(posts);
+
+        return posts;
       } catch (e) {
         console.log(e);
         throw new ApolloError(e, 400);
