@@ -16,7 +16,6 @@ const uuid = require("uuid");
 const userData = require("./data/users");
 const postsData = require("./data/posts");
 const { promisifyAll } = require("bluebird");
-const async = require("seed/lib/seed/base/async");
 
 const dateScalar = new GraphQLScalarType({
   name: "Date",
