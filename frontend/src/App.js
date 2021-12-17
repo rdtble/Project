@@ -40,7 +40,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import ReplyIcon from '@mui/icons-material/Reply';
 import { useState } from 'react';
 import io from 'socket.io-client';
-import React, { useRef} from 'react';
+import React, { useRef } from 'react';
 import {
 	ADD_POST,
 	GET_POST,
@@ -63,57 +63,6 @@ function App() {
 	});
 	const [state, dispatch] = useReducer(authReducer, initialState);
 	const value = { state, dispatch };
-	const [messageState, setState] = useState({ message: '', name: '' });
-	const [chat, setChat] = useState([]);
-	const socketRef = useRef();
-
-	// useEffect(() => {
-	// 	socketRef.current = io('/');
-	// 	return () => {
-	// 		socketRef.current.disconnect();
-	// 	};
-	// }, []);
-
-	useEffect(() => {
-		socketRef.current.on('message', ({ name, message }) => {
-			setChat([...chat, { name, message }]);
-		});
-		socketRef.current.on('user_join', function (data) {
-			setChat([
-				...chat,
-				{ name: 'ChatBot', message: `${data} has joined the chat` }
-			]);
-		});
-	}, [chat]);
-
-	const userjoin = (name) => {
-		socketRef.current.emit('user_join', name);
-	};
-
-	const onMessageSubmit = (e) => {
-		let msgEle = document.getElementById('message');
-		console.log([msgEle.name], msgEle.value);
-		setState({ ...messageState, [msgEle.name]: msgEle.value });
-		socketRef.current.emit('message', {
-			name: messageState.name,
-			message: msgEle.value
-		});
-		e.preventDefault();
-		setState({ message: '', name: messageState.name });
-		msgEle.value = '';
-		msgEle.focus();
-	};
-
-	const renderChat = () => {
-		return chat.map(({ name, message }, index) => (
-			<div key={index}>
-				<h3>
-					{name}: <span>{message}</span>
-				</h3>
-			</div>
-		));
-	};
-
 	useEffect(() => {
 		getUser().then((res) => console.log(res.data, 'use effect load'));
 
@@ -136,6 +85,7 @@ function App() {
 						<Route path='/' element={<HomePage />} />
 						<Route path='/login' element={<LoginPage />} />
 						<Route path='/register' element={<RegisterPage />} />
+						<Route path='/chat' element={<ChatPage />} />
 						<Route
 							path='/create-post'
 							element={<CreatePostPage />}
@@ -147,6 +97,8 @@ function App() {
 		</div>
 	);
 }
+
+
 
 const Layout = ({ children }) => {
 	return (
@@ -195,6 +147,13 @@ const Navbar = () => {
 						onClick={() => handleNavigation('/register')}>
 						register
 					</Button>
+
+					<Button
+						variant='text'
+						color='inherit'
+						onClick={() => handleNavigation('/chat')}>
+						Global Chat
+					</Button>
 				</Stack>
 				{state.user && <Stack>{state.user.username}</Stack>}
 			</Toolbar>
@@ -227,54 +186,6 @@ const HomePage = () => {
 
 		return (
 			<Layout>
-				<div>
-					{messageState.name && (
-						<div className="card">
-							<div className="render-chat">
-								<h1>Chat Log</h1>
-								{renderChat()}
-							</div>
-							<form onSubmit={onMessageSubmit}>
-								<h1>Messenger</h1>
-								<div>
-									<input
-										name="message"
-										id="message"
-										variant="outlined"
-										label="Message"
-									/>
-								</div>
-								<button>Send Message</button>
-							</form>
-						</div>
-					)}
-
-					{!messageState.name && (
-						<form
-							className="form"
-							onSubmit={(e) => {
-								console.log(document.getElementById('username_input').value);
-								e.preventDefault();
-								setState({ name: document.getElementById('username_input').value });
-								userjoin(document.getElementById('username_input').value);
-								// userName.value = '';
-							}}
-						>
-							<div className="form-group">
-								<label>
-									UserName:
-									<br />
-									<input id="username_input" />
-								</label>
-							</div>
-							<br />
-
-							<br />
-							<br />
-							<button type="submit"> Click to join chat room</button>
-						</form>
-					)}
-				</div>
 				<Grid container direction='column' gap={4}>
 					{getPosts.length === 0 && (
 						<Typography component='h2' variant='h5'>
@@ -850,5 +761,115 @@ const RegisterPage = () => {
 		</Layout>
 	);
 };
+
+const ChatPage = () => {
+	const [messageState, setState] = useState({ message: '', name: '' });
+	const [chat, setChat] = useState([]);
+
+	const socketRef = useRef();
+
+	useEffect(() => {
+		socketRef.current = io('/chat');
+		return () => {
+			socketRef.current.disconnect();
+		};
+	}, []);
+
+	useEffect(() => {
+		socketRef.current.on('message', ({ name, message }) => {
+			setChat([...chat, { name, message }]);
+		});
+		socketRef.current.on('user_join', function (data) {
+			setChat([
+				...chat,
+				{ name: 'ChatBot', message: `${data} has joined the chat` }
+			]);
+		});
+	}, [chat]);
+
+	const userjoin = (name) => {
+		socketRef.current.emit('user_join', name);
+	};
+
+	const onMessageSubmit = (e) => {
+		let msgEle = document.getElementById('message');
+		console.log([msgEle.name], msgEle.value);
+		setState({ ...messageState, [msgEle.name]: msgEle.value });
+		socketRef.current.emit('message', {
+			name: messageState.name,
+			message: msgEle.value
+		});
+		e.preventDefault();
+		setState({ message: '', name: messageState.name });
+		msgEle.value = '';
+		msgEle.focus();
+	};
+
+	const renderChat = () => {
+		return chat.map(({ name, message }, index) => (
+			<div key={index}>
+				<h3>
+					{name}: <span>{message}</span>
+				</h3>
+			</div>
+		));
+	};
+
+	return (
+		<div>
+			<Navbar />
+			<br /><br /><br />	<br />
+
+			{messageState.name && (
+				<div className="card">
+					<form onSubmit={onMessageSubmit}>
+						<h1>Messenger</h1>
+						<div>
+							<input
+								name="message"
+								id="message"
+								variant="outlined"
+								label="Message"
+							/>
+						</div>
+						<button className="chatButton">Send Message</button>
+					</form>
+
+					<div className="render-chat">
+						<h1>Global Chatroom</h1>
+						{renderChat()}
+					</div>
+				</div>
+			)}
+
+			{!messageState.name && (
+				<form
+					className="form"
+					onSubmit={(e) => {
+						console.log(document.getElementById('username_input').value);
+						e.preventDefault();
+						setState({ name: document.getElementById('username_input').value });
+						userjoin(document.getElementById('username_input').value);
+						// userName.value = '';
+					}}
+				>
+					<div className="form-group">
+						<label>
+							UserName:
+							<br />
+							<input id="username_input" />
+						</label>
+					</div>
+					<br />
+
+					<br />
+					<br />
+					<button type="submit"> Click to join chat room</button>
+				</form>
+			)}
+		</div>
+	);
+}
+
 
 export default App;
