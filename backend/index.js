@@ -33,7 +33,7 @@ const typeDefs = gql`
   type Query {
     getPost(id: String!): Post
     filterPosts(tags: [String], pageNum: Int, pageSize: Int): [Post]
-    getUser(optionalParamter: String): User
+    getUser(username: String!): User
     getUserInfo(optionalParameter: String): UserInfo
     getPosts(sortBy: String, pageNum: Int, pageSize: Int): [Post]
     searchPosts(searchTerm: String!): [Post]
@@ -51,6 +51,7 @@ const typeDefs = gql`
     isReply: Boolean
     replies: [Post]
     parentPost: Post
+    isDeleted: Boolean
   }
 
   type UserInfo {

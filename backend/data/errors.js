@@ -1,15 +1,11 @@
 const { ObjectId } = require("mongodb");
 
 const checkUserPosted = (userID) => {
-  if (userID == null) {
-    return;
-  }
-
   if (typeof userID !== "string") {
     throw "User ID must be of string type.";
   }
   if (!ObjectId.isValid(userID)) {
-    throw userID + " is not a valid ID";
+    throw userID + " is not a valid userID";
   }
 };
 

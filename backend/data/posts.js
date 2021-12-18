@@ -41,6 +41,7 @@ const addPost = async (
     isReply: isReply,
     replies: [],
     parentPost: parentPost,
+    isDeleted: false,
   });
   const addedInfo = await post.save();
   existingData = await posts.find({ title: post.title });
@@ -86,7 +87,7 @@ const deletePost = async (postID, userID) => {
     },
     {
       description: "Post Deleted",
-      userPosted: null,
+      isDeleted: true,
       $pullAll: {
         usersDownvoted: [userID],
         usersUpvoted: [userID],
