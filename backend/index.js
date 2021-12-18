@@ -1,94 +1,95 @@
-const { GraphQLScalarType } = require('graphql');
+const { GraphQLScalarType } = require("graphql");
 
 const {
-	ApolloServer,
-	gql,
-	ApolloError,
-	AuthenticationError,
-} = require('apollo-server');
+  ApolloServer,
+  gql,
+  ApolloError,
+  AuthenticationError,
+} = require("apollo-server");
 
-const userData = require('./data/users');
-const postsData = require('./data/posts');
+const userData = require("./data/users");
+const postsData = require("./data/posts");
 
 const dateScalar = new GraphQLScalarType({
-	name: 'Date',
-	parseValue(value) {
-		return new Date(value);
-	},
-	serialize(value) {
-		return value.toISOString();
-	},
+  name: "Date",
+  parseValue(value) {
+    return new Date(value);
+  },
+  serialize(value) {
+    return value.toISOString();
+  },
 });
 
 const typeDefs = gql`
-	scalar Date
+  scalar Date
 
-	type Query {
-		getPost(id: String!): Post
-		filterPosts(tags: [String], pageNum: Int, pageSize: Int): [Post]
-		getUser(optionalParamter: String): User
-		getUserInfo(optionalParameter: String): UserInfo
-		getPosts(sortBy: String, pageNum: Int, pageSize: Int): [Post]
-		searchPosts(searchTerm: String!): [Post]
-	}
+  type Query {
+    getPost(id: String!): Post
+    filterPosts(tags: [String], pageNum: Int, pageSize: Int): [Post]
+    getUser(username: String!): User
+    getUserInfo(optionalParameter: String): UserInfo
+    getPosts(sortBy: String, pageNum: Int, pageSize: Int): [Post]
+    searchPosts(searchTerm: String!): [Post]
+  }
 
-	type Post {
-		_id: ID!
-		userPosted: User
-		title: String
-		description: String!
-		date: Date!
-		tags: [String]
-		usersUpVoted: [User]
-		usersDownVoted: [User]
-		isReply: Boolean
-		replies: [Post]
-		parentPost: Post
-	}
+  type Post {
+    _id: ID!
+    userPosted: User
+    title: String
+    description: String!
+    date: Date!
+    tags: [String]
+    usersUpVoted: [User]
+    usersDownVoted: [User]
+    isReply: Boolean
+    replies: [Post]
+    parentPost: Post
+    isDeleted: Boolean
+  }
 
-	type UserInfo {
-		firstname: String
-		lastname: String
-		username: ID!
-		email: String
-		userUpVotedPosts: [Post]
-		userDownVotedPosts: [Post]
-		userPosts: [Post]
-	}
+  type UserInfo {
+    firstname: String
+    lastname: String
+    username: ID!
+    email: String
+    userUpVotedPosts: [Post]
+    userDownVotedPosts: [Post]
+    userPosts: [Post]
+  }
 
-	type User {
-		username: ID!
-		userUpVotedPosts: [Post]
-		userDownVotedPosts: [Post]
-		userPosts: [Post]
-	}
+  type User {
+    username: ID!
+    userUpVotedPosts: [Post]
+    userDownVotedPosts: [Post]
+    userPosts: [Post]
+  }
 
-	type Mutation {
-		signIn(username: String!, password: String!): String
-		AddPost(description: String!, title: String!, tags: [String]): Post
-		AddComment(description: String!, parentPostID: String!): Post
-		AddUser(
-			firstname: String!
-			lastname: String!
-			username: String!
-			email: String!
-			password: String!
-		): User
-		EditUser(
-			firstname: String
-			lastname: String
-			email: String
-			password: String
-		): User
-		DeletePost(postID: ID!): Boolean
-		EditDescription(postID: ID!, description: String): Post
-		AddTagsToPost(postID: ID!, tags: [String]!): Post
-		RemoveTagsToPost(postID: ID!, tags: [String]!): Post
-		UserUpVotesAPost(postID: ID!): Post
-		UserRemoveUpVoteFromAPost(postID: ID!): Post
-		UserDownVotesAPost(postID: ID!): Post
-		UserRemoveDownVoteFromAPost(postID: ID!): Post
-	}
+  type Mutation {
+    signIn(username: String!, password: String!): String
+    AddPost(description: String!, title: String!, tags: [String]): Post
+    AddComment(description: String!, parentPostID: String!): Post
+    AddUser(
+      firstname: String!
+      lastname: String!
+      username: String!
+      email: String!
+      password: String!
+    ): User
+    EditUser(
+      firstname: String
+      lastname: String
+      email: String
+      password: String
+    ): User
+    DeletePost(postID: ID!): Boolean
+    EditDescription(postID: ID!, description: String): Post
+    AddTagsToPost(postID: ID!, tags: [String]!): Post
+    RemoveTagsToPost(postID: ID!, tags: [String]!): Post
+    UserUpVotesAPost(postID: ID!): Post
+    UserRemoveUpVoteFromAPost(postID: ID!): Post
+    UserDownVotesAPost(postID: ID!): Post
+    UserRemoveDownVoteFromAPost(postID: ID!): Post
+  }
 `;
 
 let resolvers = {
@@ -582,17 +583,17 @@ let resolvers = {
 };
 
 const server = new ApolloServer({
-	typeDefs,
-	resolvers,
-	cors: {
-		origin: '*',
-		credentials: true,
-	},
-	context: async ({ req }) => {
-		return { user: req.headers.authorization };
-	},
+  typeDefs,
+  resolvers,
+  cors: {
+    origin: "*",
+    credentials: true,
+  },
+  context: async ({ req }) => {
+    return { user: req.headers.authorization };
+  },
 });
 
 server.listen().then(({ url }) => {
-	console.log(`Server running at ${url}`);
+  console.log(`Server running at ${url}`);
 });

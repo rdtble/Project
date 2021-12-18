@@ -15,44 +15,45 @@ const addPost = async (
 	isReply = false,
 	parentPost = null
 ) => {
-	errorHandling.checkUserPosted(userID);
-	errorHandling.checkString(description, 'Desciption');
-	errorHandling.checkString(title, 'Title', false); //false because title can be empty
+  errorHandling.checkUserPosted(userID);
+  errorHandling.checkString(description, "Desciption");
+  errorHandling.checkString(title, "Title", false); //false because title can be empty
 
-	if (parentPost !== null) {
-		errorHandling.checkStringObjectId(parentPost);
-	}
+  if (parentPost !== null) {
+    errorHandling.checkStringObjectId(parentPost);
+  }
 
-	if (!Array.isArray(tags)) {
-		throw 'Tags should be of array type. i.e., array of tags';
-	}
-	tags.map((tag) => errorHandling.checkString(tag, 'Tag'));
-	for (let i = 0; i < tags.length; i++) {
-		errorHandling.checkString(tags[i], 'Tag');
-	}
+  if (!Array.isArray(tags)) {
+    throw "Tags should be of array type. i.e., array of tags";
+  }
+  tags.map((tag) => errorHandling.checkString(tag, "Tag"));
+  for (let i = 0; i < tags.length; i++) {
+    errorHandling.checkString(tags[i], "Tag");
+  }
 
-	const post = new posts({
-		userPosted: userID,
-		title: title,
-		description: description,
-		tags: tags,
-		usersUpvoted: [],
-		usersDownvoted: [],
-		isReply: isReply,
-		replies: [],
-		parentPost: parentPost,
-	});
-	const addedInfo = await post.save();
-	existingData = await posts.find({ title: post.title });
-	if (existingData.length > 0) {
-		await client.hsetAsync(
-			'userPosted',
-			post._id.toString(),
-			JSON.stringify(post)
-		);
-	}
-	post._doc._id = post._doc._id.toString();
-	return post;
+  const post = new posts({
+    userPosted: userID,
+    title: title,
+    description: description,
+    tags: tags,
+    usersUpvoted: [],
+    usersDownvoted: [],
+    isReply: isReply,
+    replies: [],
+    parentPost: parentPost,
+    isDeleted: false,
+  });
+  const addedInfo = await post.save();
+  existingData = await posts.find({ title: post.title });
+  if (existingData.length > 0) {
+    await client.hsetAsync(
+      "userPosted",
+      post._id.toString(),
+      JSON.stringify(post)
+    );
+  }
+  post._doc._id = post._doc._id.toString();
+  return post;
 };
 
 const addReplytoPost = async (postID, replyPostID) => {
@@ -77,6 +78,7 @@ const addReplytoPost = async (postID, replyPostID) => {
 // delete does not mean deleting the post. It means to make the post description as "deleted" and user_info Anonymous.
 //if the same user upVotes or downVotes the post, it will remove
 const deletePost = async (postID, userID) => {
+<<<<<<< HEAD
 	errorHandling.checkStringObjectId(postID, 'Post ID');
 	errorHandling.checkStringObjectId(userID, 'User ID');
 	const data = await posts.updateOne(
@@ -98,6 +100,30 @@ const deletePost = async (postID, userID) => {
 	await client.hdelAsync('userPosted', postID);
 
 	return true;
+=======
+  errorHandling.checkStringObjectId(postID, "Post ID");
+  errorHandling.checkStringObjectId(userID, "User ID");
+  const data = await posts.updateOne(
+    {
+      _id: ObjectId(postID),
+      userPosted: userID,
+    },
+    {
+      description: "Post Deleted",
+      isDeleted: true,
+      $pullAll: {
+        usersDownvoted: [userID],
+        usersUpvoted: [userID],
+      },
+    }
+  );
+  if (data.modifiedCount == 0) {
+    throw "Cannot delete the post.";
+  }
+  await client.hdelAsync("userPosted", postID);
+
+  return true;
+>>>>>>> bug fixes backend
 };
 
 //yet to implement sort by feature
