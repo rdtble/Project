@@ -769,7 +769,7 @@ const ChatPage = () => {
 	const socketRef = useRef();
 
 	useEffect(() => {
-		socketRef.current = io('/chat');
+		socketRef.current = io('/');
 		return () => {
 			socketRef.current.disconnect();
 		};
@@ -821,7 +821,7 @@ const ChatPage = () => {
 			<br /><br /><br />	<br />
 
 			{messageState.name && (
-				<div className="card">
+				<div className="chatCard">
 					<form onSubmit={onMessageSubmit}>
 						<h1>Messenger</h1>
 						<div>
