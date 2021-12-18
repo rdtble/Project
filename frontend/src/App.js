@@ -22,6 +22,10 @@ import {
 	CardActions,
 	CardContent,
 	Chip,
+	CircularProgress,
+	Dialog,
+	DialogContent,
+	DialogTitle,
 	Fab,
 	Grid,
 	IconButton,
@@ -38,13 +42,19 @@ import EditIcon from '@mui/icons-material/Edit';
 import ShareIcon from '@mui/icons-material/Share';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ReplyIcon from '@mui/icons-material/Reply';
+import CloseIcon from '@mui/icons-material/Close';
+import ClearAllIcon from '@mui/icons-material/ClearAll';
+import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp';
 import { useState } from 'react';
 import {
+	ADD_COMMENT,
 	ADD_POST,
+	DELETE_POST,
 	GET_POST,
 	GET_POSTS,
 	GET_USER_INFO,
 	SIGN_IN,
+	USER_ACCOUNT_PAGE,
 	USER_DOWNVOTES_A_POST,
 	USER_REMOVE_DOWNVOTE_FROM_POST,
 	USER_REMOVE_UPVOTE_FROM_POST,
@@ -53,6 +63,7 @@ import {
 import authReducer, { initialState } from './context/reducer';
 import AuthContext from './context/context';
 import { USER_LOADED, UNAUTH_USER_LOADED, LOGIN } from './types';
+import { Box } from '@mui/system';
 
 // TODO: Add toasts to show status/errors
 function App() {
@@ -89,6 +100,7 @@ function App() {
 							element={<CreatePostPage />}
 						/>
 						<Route path='/post/:id' element={<PostPage />} />
+						<Route path='/user' element={<UserProfilePage />} />
 					</Routes>
 				</Router>
 			</AuthContext.Provider>
@@ -163,7 +175,13 @@ const HomePage = () => {
 	});
 
 	if (loading) {
-		return <Layout>Loading...</Layout>;
+		return (
+			<Layout>
+				<Box sx={{ display: 'flex' }}>
+					<CircularProgress />
+				</Box>
+			</Layout>
+		);
 	}
 
 	if (error) {
@@ -175,7 +193,7 @@ const HomePage = () => {
 
 		return (
 			<Layout>
-				<Grid container direction='column' gap={4}>
+				<Grid container direction='column'>
 					{getPosts.length === 0 && (
 						<Typography component='h2' variant='h5'>
 							No posts to show!
@@ -205,9 +223,14 @@ const HomePage = () => {
 // TODO: Add toasts for interactions
 const QueryCard = ({ post, mode }) => {
 	const { state } = useContext(AuthContext);
-	const [postData, setPostData] = useState(post);
+	const navigate = useNavigate();
+	const handleNavigation = (path) => {
+		navigate(path);
+	};
 
-	const numReplies = postData.replies.length;
+	const [postData, setPostData] = useState(post);
+	const [replyOpen, setReplyOpen] = useState(false);
+
 	const numUpvotes = postData.usersUpVoted.length;
 	const numDownvotes = postData.usersDownVoted.length;
 
@@ -235,6 +258,10 @@ const QueryCard = ({ post, mode }) => {
 	});
 
 	const [removeDownvotePost] = useMutation(USER_REMOVE_DOWNVOTE_FROM_POST, {
+		variables: { postId: post._id },
+	});
+
+	const [deletePost] = useMutation(DELETE_POST, {
 		variables: { postId: post._id },
 	});
 
@@ -272,8 +299,49 @@ const QueryCard = ({ post, mode }) => {
 		}
 	};
 
+	const handleReply = (AddComment) => {
+		setPostData({ ...postData, ...AddComment });
+	};
+
+	const handleReplyOpen = () => {
+		setReplyOpen(true);
+	};
+
+	const handleReplyClose = () => {
+		setReplyOpen(false);
+	};
+
+	const handleDelete = () => {
+		deletePost()
+			.then(({ data }) => {
+				const { DeletePost } = data;
+
+				if (DeletePost) {
+					setPostData({
+						...postData,
+						description: '_**[deleted]**_',
+					});
+				}
+			})
+			.catch((err) => alert('Cannot delete this post'));
+	};
+
 	return (
-		<Card>
+		<Card variant='outlined' sx={{ borderRadius: 0 }}>
+			{postData.isReply && mode === 'single' && (
+				<Stack paddingX={4} paddingY={2}>
+					<Button
+						color='secondary'
+						size='small'
+						startIcon={<ArrowDropUpIcon />}
+						onClick={() =>
+							handleNavigation(`/post/${postData.parentPost._id}`)
+						}>
+						Load parent post
+					</Button>
+				</Stack>
+			)}
+
 			<CardContent>
 				<Stack direction='row' gap={3}>
 					<Stack direction='column' alignItems='center'>
@@ -308,39 +376,25 @@ const QueryCard = ({ post, mode }) => {
 						</Stack>
 					</Stack>
 
-					<Stack>
-						<Stack direction='row' alignItems='center' gap={2}>
-							{/* <Avatar>
-												{post.userPosted.username[0]}
-											</Avatar> */}
-							<Typography component='h3'>
-								{postData.userPosted.username}
-							</Typography>
-						</Stack>
-
+					<Stack flex={1}>
 						<Typography component='h2' variant='h4'>
 							{mode === 'list' ? (
-								<RouterLink
-									to={`/post/${post._id}`}
-									style={{ textDecoration: 'none' }}>
-									<Link underline='none'>
-										{postData.title}
-									</Link>
-								</RouterLink>
+								<Link
+									underline='none'
+									sx={{
+										':hover': {
+											cursor: 'pointer',
+										},
+									}}
+									onClick={() =>
+										handleNavigation(`/post/${post._id}`)
+									}>
+									{postData.title}
+								</Link>
 							) : (
 								<>{postData.title}</>
 							)}
 						</Typography>
-
-						<Tooltip
-							title={moment(postData.date).format(
-								'Do MMM, YYYY (hh:mm:ss a)'
-							)}
-							arrow>
-							<Typography component='p' variant='overline'>
-								{moment(postData.date).fromNow()}
-							</Typography>
-						</Tooltip>
 
 						<ReactMarkdown children={postData.description} />
 
@@ -358,72 +412,126 @@ const QueryCard = ({ post, mode }) => {
 							sx={{
 								paddingX: 0,
 								paddingY: 2,
+								justifyContent: 'space-between',
+								alignItems: 'flex-end',
+								maxWidth: '100%',
 							}}>
-							<Button
-								size='small'
-								variant='text'
-								startIcon={<ShareIcon />}
-								onClick={() => {
-									navigator.clipboard.writeText(
-										window.location.origin.concat(
-											`/post/${post._id}`
-										)
-									);
-								}}>
-								Share
-							</Button>
+							<Stack direction='row' gap={1}>
+								<Button
+									size='small'
+									variant='text'
+									startIcon={<ShareIcon />}
+									onClick={() => {
+										navigator.clipboard.writeText(
+											window.location.origin.concat(
+												`/post/${post._id}`
+											)
+										);
+									}}>
+									Share
+								</Button>
 
-							<Button
-								size='small'
-								variant='text'
-								startIcon={<ReplyIcon />}
-								onClick={() => {
-									console.log('reply');
-								}}>
-								Comment ({numReplies})
-							</Button>
+								<Button
+									size='small'
+									variant='text'
+									startIcon={<ReplyIcon />}
+									onClick={handleReplyOpen}>
+									Comment{' '}
+									{mode === 'single' &&
+										`(${postData.replies.length})`}
+								</Button>
 
-							{state.user &&
-								state.user.username ===
-									post.userPosted.username && (
-									<Button
-										size='small'
-										variant='text'
-										startIcon={<DeleteIcon />}
-										onClick={() => {
-											console.log('delete');
-										}}>
-										Delete
-									</Button>
-								)}
+								{state.user &&
+									state.user.username ===
+										post.userPosted.username && (
+										<Button
+											size='small'
+											variant='text'
+											startIcon={<DeleteIcon />}
+											onClick={handleDelete}>
+											Delete
+										</Button>
+									)}
+							</Stack>
+
+							<Card
+								variant='outlined'
+								sx={{
+									padding: 1,
+									backgroundColor: 'lightgray',
+								}}>
+								<Typography component='p' variant='caption'>
+									<strong>
+										{postData.userPosted.username}
+									</strong>
+								</Typography>
+								<Tooltip
+									title={moment(postData.date).format(
+										'Do MMM, YYYY (hh:mm:ss a)'
+									)}
+									placement='bottom-end'>
+									<Typography component='p' variant='caption'>
+										posted {moment(postData.date).fromNow()}
+									</Typography>
+								</Tooltip>
+							</Card>
 						</CardActions>
 
-						{mode !== 'list' && (
-							<Stack>
-								<Typography component='h3' variant='h6'>
+						{/* <Typography component='h3' variant='h6'>
 									<strong>
 										Replies ({postData.replies.length})
 									</strong>
-								</Typography>
+								</Typography> */}
 
-								{postData.replies.length !== 0 ? (
-									<Grid container direction='column' gap={4}>
-										{postData.replies.map((post) => (
-											<Grid item key={post._id} xs>
-												<QueryCard
-													post={post}
-													mode='list'
-												/>
-											</Grid>
-										))}
+						{mode !== 'list' && postData.replies && (
+							<Grid container direction='column' marginTop={2}>
+								{postData.replies.map((post) => (
+									<Grid item key={post._id} xs>
+										<QueryCard post={post} mode='comment' />
 									</Grid>
-								) : (
-									<Typography component='p' variant='body2'>
-										No replies yet!
-									</Typography>
-								)}
+								))}
+							</Grid>
+						)}
+
+						{!postData.replies && (
+							<Stack>
+								<Button
+									color='secondary'
+									size='small'
+									startIcon={<ClearAllIcon />}
+									onClick={() =>
+										handleNavigation(
+											`/post/${postData._id}`
+										)
+									}>
+									Continue this thread
+								</Button>
 							</Stack>
 						)}
+
+						<Dialog
+							fullWidth
+							maxWidth='lg'
+							open={replyOpen}
+							onClose={handleReplyClose}>
+							<DialogTitle
+								sx={{
+									display: 'flex',
+									justifyContent: 'space-between',
+								}}>
+								Write a reply
+								<IconButton onClick={handleReplyClose}>
+									<CloseIcon />
+								</IconButton>
+							</DialogTitle>
+							<DialogContent>
+								<WriteReply
+									parentPostId={postData._id}
+									closeFunction={handleReplyClose}
+									handleReply={handleReply}
+								/>
+							</DialogContent>
+						</Dialog>
 					</Stack>
 				</Stack>
 			</CardContent>
@@ -431,6 +539,63 @@ const QueryCard = ({ post, mode }) => {
 	);
 };
 
+const WriteReply = ({ parentPostId, closeFunction, handleReply }) => {
+	const [value, setValue] = useState('');
+	const [selectedTab, setSelectedTab] = useState('write');
+
+	const [addComment, { loading, error }] = useMutation(ADD_COMMENT, {
+		variables: {
+			description: value,
+			parentPostId,
+		},
+	});
+
+	const handleSubmit = async (e) => {
+		e.preventDefault();
+
+		if (value.trim() === '') {
+			alert('Description cannot be empty!');
+		} else {
+			await addComment().then((res) => {
+				const { AddComment } = res.data;
+
+				handleReply(AddComment.parentPost);
+				closeFunction();
+			});
+		}
+	};
+
+	return (
+		<form onSubmit={handleSubmit}>
+			<Stack direction='column' spacing={3} paddingY={4}>
+				<ReactMde
+					value={value}
+					onChange={setValue}
+					selectedTab={selectedTab}
+					onTabChange={setSelectedTab}
+					generateMarkdownPreview={(markdown) =>
+						Promise.resolve(<ReactMarkdown children={markdown} />)
+					}
+					childProps={{
+						writeButton: {
+							tabIndex: -1,
+						},
+					}}
+				/>
+
+				<Button
+					disabled={loading}
+					type='submit'
+					variant='contained'
+					sx={{ marginTop: 3 }}>
+					Commment
+				</Button>
+			</Stack>
+		</form>
+	);
+};
+
+// TODO: Handle for failure of adding post
 const CreatePostPage = () => {
 	const navigate = useNavigate();
 	const handleNavigation = (path) => {
@@ -561,14 +726,21 @@ const PostPage = () => {
 
 	const { data, loading, error } = useQuery(GET_POST, {
 		variables: { getPostId: id },
+		fetchPolicy: 'network-only',
 	});
 
 	if (loading) {
-		return <div>Loading...</div>;
+		return (
+			<Layout>
+				<Box sx={{ display: 'flex' }}>
+					<CircularProgress />
+				</Box>
+			</Layout>
+		);
 	}
 
 	if (error) {
-		return <div>{error.message}</div>;
+		return <Layout>{error.message}</Layout>;
 	}
 
 	if (data) {
@@ -582,12 +754,39 @@ const PostPage = () => {
 	}
 };
 
+const UserProfilePage = () => {
+	const { data, loading, error } = useQuery(USER_ACCOUNT_PAGE);
+
+	console.log(data);
+
+	if (loading) {
+		return (
+			<Layout>
+				<Box sx={{ display: 'flex' }}>
+					<CircularProgress />
+				</Box>
+			</Layout>
+		);
+	}
+
+	if (error) {
+		return <Layout>{error.message}</Layout>;
+	}
+
+	return <Layout>fetched</Layout>;
+};
+
 const LoginPage = () => {
+	const navigate = useNavigate();
+	const handleNavigation = (path) => {
+		navigate(path);
+	};
+
 	const [username, setUsername] = useState('');
 	const [password, setPassword] = useState('');
 	const [loading, setLoading] = useState(false);
 
-	const { dispatch } = useContext(AuthContext);
+	const { state, dispatch } = useContext(AuthContext);
 
 	const [signIn, response] = useMutation(SIGN_IN, {
 		variables: { username, password },
@@ -595,6 +794,10 @@ const LoginPage = () => {
 	const [getUser, { data, error }] = useLazyQuery(GET_USER_INFO, {
 		context: { headers: { authorization: localStorage.getItem('token') } },
 	});
+
+	if (state.isAuthenticated) {
+		handleNavigation('/');
+	}
 
 	const handleLogin = (e) => {
 		e.preventDefault();
@@ -657,12 +860,23 @@ const LoginPage = () => {
 };
 
 const RegisterPage = () => {
+	const navigate = useNavigate();
+	const handleNavigation = (path) => {
+		navigate(path);
+	};
+
+	const { state, dispatch } = useContext(AuthContext);
+
 	const [firstname, setFirstname] = useState('');
 	const [lastname, setLastname] = useState('');
 	const [email, setEmail] = useState('');
 	const [username, setUsername] = useState('');
 	const [password, setPassword] = useState('');
 	const [password2, setPassword2] = useState('');
+
+	if (state.isAuthenticated) {
+		handleNavigation('/');
+	}
 
 	const handleRegister = (e) => {
 		e.preventDefault();

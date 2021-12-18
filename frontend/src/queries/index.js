@@ -57,21 +57,50 @@ const GET_POST = gql`
 			date
 			tags
 			isReply
-			parentPost {
-				_id
-				userPosted {
-					username
-				}
-			}
 			usersUpVoted {
 				username
 			}
 			usersDownVoted {
 				username
 			}
+			parentPost {
+				_id
+			}
 			replies {
 				_id
-				title
+				description
+				userPosted {
+					username
+				}
+				date
+				usersUpVoted {
+					username
+				}
+				usersDownVoted {
+					username
+				}
+				parentPost {
+					_id
+				}
+				isReply
+				replies {
+					_id
+					description
+					userPosted {
+						username
+					}
+					date
+					usersUpVoted {
+						username
+					}
+					usersDownVoted {
+						username
+					}
+					parentPost {
+						_id
+					}
+					isReply
+				}
 			}
 		}
 	}
@@ -93,6 +122,40 @@ const ADD_POST = gql`
 				_id
 			}
 		}
+	}
+`;
+
+const ADD_COMMENT = gql`
+	mutation AddComment($description: String!, $parentPostId: String!) {
+		AddComment(description: $description, parentPostID: $parentPostId) {
+			parentPost {
+				replies {
+					_id
+					userPosted {
+						username
+					}
+					description
+					date
+					tags
+					usersUpVoted {
+						username
+					}
+					usersDownVoted {
+						username
+					}
+					isReply
+					replies {
+						_id
+					}
+				}
+			}
+		}
+	}
+`;
+
+const DELETE_POST = gql`
+	mutation DeletePost($postId: ID!) {
+		DeletePost(postID: $postId)
 	}
 `;
 
@@ -148,14 +211,62 @@ const USER_REMOVE_DOWNVOTE_FROM_POST = gql`
 	}
 `;
 
+const USER_ACCOUNT_PAGE = gql`
+	query GetUserInfo {
+		getUserInfo {
+			firstname
+			lastname
+			username
+			email
+			userUpVotedPosts {
+				_id
+				userPosted {
+					username
+				}
+				title
+				description
+				date
+				tags
+				isReply
+				usersUpVoted {
+					username
+				}
+				usersDownVoted {
+					username
+				}
+			}
+			userPosts {
+				_id
+				userPosted {
+					username
+				}
+				title
+				description
+				date
+				tags
+				usersUpVoted {
+					username
+				}
+				usersDownVoted {
+					username
+				}
+				isReply
+			}
+		}
+	}
+`;
+
 export {
 	SIGN_IN,
 	GET_USER_INFO,
 	GET_POSTS,
 	GET_POST,
 	ADD_POST,
+	ADD_COMMENT,
+	DELETE_POST,
 	USER_UPVOTES_A_POST,
 	USER_DOWNVOTES_A_POST,
 	USER_REMOVE_UPVOTE_FROM_POST,
 	USER_REMOVE_DOWNVOTE_FROM_POST,
+	USER_ACCOUNT_PAGE,
 };
