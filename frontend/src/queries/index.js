@@ -6,6 +6,26 @@ const SIGN_IN = gql`
 	}
 `;
 
+const SIGN_UP = gql`
+	mutation AddUser(
+		$firstname: String!
+		$lastname: String!
+		$username: String!
+		$email: String!
+		$password: String!
+	) {
+		AddUser(
+			firstname: $firstname
+			lastname: $lastname
+			username: $username
+			email: $email
+			password: $password
+		) {
+			username
+		}
+	}
+`;
+
 const GET_USER_INFO = gql`
 	query GetUser {
 		getUserInfo {
@@ -28,6 +48,7 @@ const GET_POSTS = gql`
 			date
 			tags
 			isReply
+			isDeleted
 			parentPost {
 				_id
 				title
@@ -57,6 +78,7 @@ const GET_POST = gql`
 			date
 			tags
 			isReply
+			isDeleted
 			usersUpVoted {
 				username
 			}
@@ -83,6 +105,7 @@ const GET_POST = gql`
 					_id
 				}
 				isReply
+				isDeleted
 				replies {
 					_id
 					description
@@ -100,6 +123,7 @@ const GET_POST = gql`
 						_id
 					}
 					isReply
+					isDeleted
 				}
 			}
 		}
@@ -118,6 +142,7 @@ const ADD_POST = gql`
 			date
 			tags
 			isReply
+			isDeleted
 			parentPost {
 				_id
 			}
@@ -144,6 +169,7 @@ const ADD_COMMENT = gql`
 						username
 					}
 					isReply
+					isDeleted
 					replies {
 						_id
 					}
@@ -212,29 +238,9 @@ const USER_REMOVE_DOWNVOTE_FROM_POST = gql`
 `;
 
 const USER_ACCOUNT_PAGE = gql`
-	query GetUserInfo {
-		getUserInfo {
-			firstname
-			lastname
+	query GetUser($username: String!) {
+		getUser(username: $username) {
 			username
-			email
-			userUpVotedPosts {
-				_id
-				userPosted {
-					username
-				}
-				title
-				description
-				date
-				tags
-				isReply
-				usersUpVoted {
-					username
-				}
-				usersDownVoted {
-					username
-				}
-			}
 			userPosts {
 				_id
 				userPosted {
@@ -251,6 +257,43 @@ const USER_ACCOUNT_PAGE = gql`
 					username
 				}
 				isReply
+				isDeleted
+			}
+			userUpVotedPosts {
+				_id
+				userPosted {
+					username
+				}
+				title
+				description
+				date
+				tags
+				usersUpVoted {
+					username
+				}
+				usersDownVoted {
+					username
+				}
+				isReply
+				isDeleted
+			}
+			userDownVotedPosts {
+				_id
+				userPosted {
+					username
+				}
+				title
+				description
+				date
+				tags
+				usersUpVoted {
+					username
+				}
+				usersDownVoted {
+					username
+				}
+				isReply
+				isDeleted
 			}
 		}
 	}
@@ -258,6 +301,7 @@ const USER_ACCOUNT_PAGE = gql`
 
 export {
 	SIGN_IN,
+	SIGN_UP,
 	GET_USER_INFO,
 	GET_POSTS,
 	GET_POST,
