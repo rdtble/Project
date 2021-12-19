@@ -28,7 +28,11 @@
 		"react-router-dom": "^6.0.2",
 		"react-scripts": "4.0.3",
 		"socket.io-client": "^4.4.0",
-		"web-vitals": "^1.0.1"
+		"web-vitals": "^1.0.1",
+		"@voxeet/voxeet-web-sdk": "3.3.0",
+		"@voxeet/react-redux-5.1.1": "5.1.1",
+		"stringify": "5.2.0",
+		"html-loader": "3.0.1"
 	},
 	"scripts": {
 		"dev": "react-scripts start",
