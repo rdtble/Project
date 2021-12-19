@@ -6,6 +6,26 @@ const SIGN_IN = gql`
 	}
 `;
 
+const SIGN_UP = gql`
+	mutation AddUser(
+		$firstname: String!
+		$lastname: String!
+		$username: String!
+		$email: String!
+		$password: String!
+	) {
+		AddUser(
+			firstname: $firstname
+			lastname: $lastname
+			username: $username
+			email: $email
+			password: $password
+		) {
+			username
+		}
+	}
+`;
+
 const GET_USER_INFO = gql`
 	query GetUser {
 		getUserInfo {
@@ -28,6 +48,7 @@ const GET_POSTS = gql`
 			date
 			tags
 			isReply
+			isDeleted
 			parentPost {
 				_id
 				title
@@ -57,21 +78,53 @@ const GET_POST = gql`
 			date
 			tags
 			isReply
-			parentPost {
-				_id
-				userPosted {
-					username
-				}
-			}
+			isDeleted
 			usersUpVoted {
 				username
 			}
 			usersDownVoted {
 				username
 			}
+			parentPost {
+				_id
+			}
 			replies {
 				_id
-				title
+				description
+				userPosted {
+					username
+				}
+				date
+				usersUpVoted {
+					username
+				}
+				usersDownVoted {
+					username
+				}
+				parentPost {
+					_id
+				}
+				isReply
+				isDeleted
+				replies {
+					_id
+					description
+					userPosted {
+						username
+					}
+					date
+					usersUpVoted {
+						username
+					}
+					usersDownVoted {
+						username
+					}
+					parentPost {
+						_id
+					}
+					isReply
+					isDeleted
+				}
 			}
 		}
 	}
@@ -89,10 +142,46 @@ const ADD_POST = gql`
 			date
 			tags
 			isReply
+			isDeleted
 			parentPost {
 				_id
 			}
 		}
+	}
+`;
+
+const ADD_COMMENT = gql`
+	mutation AddComment($description: String!, $parentPostId: String!) {
+		AddComment(description: $description, parentPostID: $parentPostId) {
+			parentPost {
+				replies {
+					_id
+					userPosted {
+						username
+					}
+					description
+					date
+					tags
+					usersUpVoted {
+						username
+					}
+					usersDownVoted {
+						username
+					}
+					isReply
+					isDeleted
+					replies {
+						_id
+					}
+				}
+			}
+		}
+	}
+`;
+
+const DELETE_POST = gql`
+	mutation DeletePost($postId: ID!) {
+		DeletePost(postID: $postId)
 	}
 `;
 
@@ -148,14 +237,80 @@ const USER_REMOVE_DOWNVOTE_FROM_POST = gql`
 	}
 `;
 
+const USER_ACCOUNT_PAGE = gql`
+	query GetUser($username: String!) {
+		getUser(username: $username) {
+			username
+			userPosts {
+				_id
+				userPosted {
+					username
+				}
+				title
+				description
+				date
+				tags
+				usersUpVoted {
+					username
+				}
+				usersDownVoted {
+					username
+				}
+				isReply
+				isDeleted
+			}
+			userUpVotedPosts {
+				_id
+				userPosted {
+					username
+				}
+				title
+				description
+				date
+				tags
+				usersUpVoted {
+					username
+				}
+				usersDownVoted {
+					username
+				}
+				isReply
+				isDeleted
+			}
+			userDownVotedPosts {
+				_id
+				userPosted {
+					username
+				}
+				title
+				description
+				date
+				tags
+				usersUpVoted {
+					username
+				}
+				usersDownVoted {
+					username
+				}
+				isReply
+				isDeleted
+			}
+		}
+	}
+`;
+
 export {
 	SIGN_IN,
+	SIGN_UP,
 	GET_USER_INFO,
 	GET_POSTS,
 	GET_POST,
 	ADD_POST,
+	ADD_COMMENT,
+	DELETE_POST,
 	USER_UPVOTES_A_POST,
 	USER_DOWNVOTES_A_POST,
 	USER_REMOVE_UPVOTE_FROM_POST,
 	USER_REMOVE_DOWNVOTE_FROM_POST,
+	USER_ACCOUNT_PAGE,
 };
