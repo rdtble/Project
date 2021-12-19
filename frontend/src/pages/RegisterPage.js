@@ -1,5 +1,6 @@
 import { useContext, useState } from 'react';
 import { useNavigate } from 'react-router';
+import { useLazyQuery, useMutation } from '@apollo/client';
 
 import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
@@ -8,6 +9,8 @@ import Typography from '@mui/material/Typography';
 
 import AuthContext from '../context/context';
 import Layout from '../layouts/Layout';
+import { GET_USER_INFO, SIGN_UP, SIGN_IN } from '../queries';
+import { LOGIN } from '../types';
 
 const RegisterPage = () => {
 	const navigate = useNavigate();
@@ -15,28 +18,70 @@ const RegisterPage = () => {
 		navigate(path);
 	};
 
-	const { state, dispatch } = useContext(AuthContext);
-
 	const [firstname, setFirstname] = useState('');
 	const [lastname, setLastname] = useState('');
 	const [email, setEmail] = useState('');
 	const [username, setUsername] = useState('');
 	const [password, setPassword] = useState('');
 	const [password2, setPassword2] = useState('');
+	const [loading, setLoading] = useState(false);
 
-	if (state.isAuthenticated) {
+	const { state, dispatch } = useContext(AuthContext);
+
+	const [signIn] = useMutation(SIGN_IN, {
+		variables: { username, password },
+	});
+	const [register] = useMutation(SIGN_UP, {
+		variables: { firstname, lastname, username, email, password },
+	});
+	const [getUser] = useLazyQuery(GET_USER_INFO, {
+		context: { headers: { authorization: localStorage.getItem('token') } },
+	});
+
+	if (!loading && state.isAuthenticated) {
 		handleNavigation('/');
 	}
 
 	const handleRegister = (e) => {
 		e.preventDefault();
+		setLoading(true);
 
-		console.log(username, password);
+		if (password !== password2) {
+			alert('Passwords dont match!');
+		} else {
+			register()
+				.then((res) => {
+					signIn()
+						.then(({ data }) => {
+							console.log(data);
+							const token = data.signIn;
+
+							getUser().then((_) => {
+								const user = data.getUserInfo;
+								const payload = { token, user };
+
+								dispatch({ type: LOGIN, payload });
+
+								setLoading(false);
+
+								handleNavigation('/');
+							});
+						})
+						.catch((err) => {
+							console.log(err);
+							setLoading(false);
+						});
+				})
+				.catch((err) => {
+					console.log(err);
+					setLoading(false);
+				});
+		}
 	};
 
 	return (
 		<Layout>
-			<Typography component='h1' variant='h3'>
+			<Typography component='h1' variant='h3' gutterBottom>
 				Register here
 			</Typography>
 

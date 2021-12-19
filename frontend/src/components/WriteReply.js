@@ -12,7 +12,7 @@ const WriteReply = ({ parentPostId, closeFunction, handleReply }) => {
 	const [value, setValue] = useState('');
 	const [selectedTab, setSelectedTab] = useState('write');
 
-	const [addComment, { loading, error }] = useMutation(ADD_COMMENT, {
+	const [addComment, { loading }] = useMutation(ADD_COMMENT, {
 		variables: {
 			description: value,
 			parentPostId,

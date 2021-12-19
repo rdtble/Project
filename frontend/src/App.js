@@ -19,7 +19,7 @@ import ChatPage from './pages/ChatPage';
 
 // TODO: Add toasts to show status/errors
 function App() {
-	const [getUser, { data, loading, error }] = useLazyQuery(GET_USER_INFO, {
+	const [getUser, { data }] = useLazyQuery(GET_USER_INFO, {
 		context: { headers: { authorization: localStorage.getItem('token') } },
 	});
 	const [state, dispatch] = useReducer(authReducer, initialState);

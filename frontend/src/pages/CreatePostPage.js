@@ -1,5 +1,5 @@
 import { useMutation } from '@apollo/client';
-import { useState } from 'react';
+import { useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 
 import ReactMde from 'react-mde';
@@ -13,6 +13,7 @@ import AddIcon from '@mui/icons-material/Add';
 
 import { ADD_POST } from '../queries';
 import Layout from '../layouts/Layout';
+import AuthContext from '../context/context';
 
 // TODO: Handle for failure of adding post
 const CreatePostPage = () => {
@@ -20,19 +21,27 @@ const CreatePostPage = () => {
 	const handleNavigation = (path) => {
 		navigate(path);
 	};
+	const { state } = useContext(AuthContext);
+
 	const [title, setTitle] = useState('');
 	const [value, setValue] = useState('');
 	const [tags, setTags] = useState([]);
 	const [tagText, setTagText] = useState('');
 	const [selectedTab, setSelectedTab] = useState('write');
 
-	const [addPost, { loading, error }] = useMutation(ADD_POST, {
+	const [addPost, { loading }] = useMutation(ADD_POST, {
 		variables: {
 			description: value,
 			title: title,
 			tags: tags,
 		},
 	});
+
+	useEffect(() => {
+		if (!state.isAuthenticated) {
+			handleNavigation('/');
+		}
+	}, [state.isAuthenticated]);
 
 	const handleAddTag = () => {
 		if (tagText.trim() === '') {

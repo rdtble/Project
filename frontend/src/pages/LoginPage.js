@@ -27,7 +27,7 @@ const LoginPage = () => {
 	const [signIn] = useMutation(SIGN_IN, {
 		variables: { username, password },
 	});
-	const [getUser, { data, error }] = useLazyQuery(GET_USER_INFO, {
+	const [getUser] = useLazyQuery(GET_USER_INFO, {
 		context: { headers: { authorization: localStorage.getItem('token') } },
 	});
 
@@ -49,8 +49,11 @@ const LoginPage = () => {
 					const payload = { token, user };
 
 					dispatch({ type: LOGIN, payload });
+
+					setLoading(false);
+
+					handleNavigation('/');
 				});
-				setLoading(false);
 			})
 			.catch((err) => {
 				console.log(err);
@@ -60,7 +63,7 @@ const LoginPage = () => {
 
 	return (
 		<Layout>
-			<Typography component='h1' variant='h3'>
+			<Typography component='h1' variant='h3' gutterBottom>
 				Login here
 			</Typography>
 

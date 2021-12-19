@@ -14,6 +14,7 @@ const UserProfilePage = () => {
 	const { username } = useParams();
 	const { data, loading, error } = useQuery(USER_ACCOUNT_PAGE, {
 		variables: { username },
+		fetchPolicy: 'network-only',
 	});
 
 	console.log(data);
@@ -37,7 +38,7 @@ const UserProfilePage = () => {
 
 		return (
 			<Layout>
-				<Typography component='h1' variant='h3'>
+				<Typography component='h1' variant='h3' gutterBottom>
 					{getUser.username}'s posts
 				</Typography>
 				<Grid container direction='column'>

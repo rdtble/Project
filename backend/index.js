@@ -274,7 +274,7 @@ let resolvers = {
 
 		userDownVotedPosts: async (parentArgs) => {
 			try {
-				let posts = parentArgs.userDownVotedPosts;
+				let posts = parentArgs.userDownvotedPosts;
 
 				posts = posts.map(async (postId) => {
 					return await postsData.getPostbyID(postId);
