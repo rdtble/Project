@@ -27,15 +27,15 @@ const HomePage = () => {
 	const { state } = useContext(AuthContext);
 
 	const { data, error, loading, fetchMore } = useQuery(GET_POSTS, {
-		variables: { pageNum: 1, pageSize: 2, sortBy: 'default' },
+		variables: { pageNum: 1, pageSize: 10, sortBy: 'default' },
 		fetchPolicy: 'network-only',
 	});
 
 	const handleFetchMore = (getPosts) =>
 		fetchMore({
 			variables: {
-				pageNum: getPosts.length / 2 + 1,
-				pageSize: 2,
+				pageNum: Math.ceil(getPosts.length / 10) + 1,
+				pageSize: 10,
 				sortBy: 'default',
 			},
 			updateQuery: (prevResult, { fetchMoreResult }) => {
@@ -43,7 +43,7 @@ const HomePage = () => {
 					return prevResult;
 				}
 
-				if (fetchMoreResult.getPosts.length < 2) {
+				if (fetchMoreResult.getPosts.length < 10) {
 					setHasMoreResults(false);
 				}
 
@@ -105,6 +105,19 @@ const HomePage = () => {
 							sx={{ marginTop: 2 }}>
 							load more
 						</Button>
+					)}
+					{!hasMoreResults && (
+						<Box
+							marginY={2}
+							sx={{
+								display: 'flex',
+								alignItems: 'center',
+								justifyContent: 'center',
+							}}>
+							<Typography component='p' variant='overline'>
+								No more posts to show!
+							</Typography>
+						</Box>
 					)}
 				</Grid>
 
