@@ -2,6 +2,9 @@ import { useEffect, useReducer } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { useLazyQuery } from '@apollo/client';
 
+import toast, { Toaster } from 'react-hot-toast';
+import Box from '@mui/material/Box';
+import CircularProgress from '@mui/material/CircularProgress';
 import './App.css';
 import 'react-mde/lib/styles/css/react-mde-all.css';
 
@@ -17,18 +20,20 @@ import UserProfilePage from './pages/UserProfilePage';
 import RegisterPage from './pages/RegisterPage';
 import ChatPage from './pages/ChatPage';
 
-// TODO: Add toasts to show status/errors
 function App() {
 	const [getUser, { data }] = useLazyQuery(GET_USER_INFO, {
 		context: { headers: { authorization: localStorage.getItem('token') } },
 	});
 	const [state, dispatch] = useReducer(authReducer, initialState);
 	const value = { state, dispatch };
+
 	useEffect(() => {
-		getUser().then((res) => console.log(res.data, 'use effect load'));
+		getUser();
 
 		if (data) {
 			const user = data.getUserInfo;
+
+			toast.success(`Welcome back, ${user.firstname}!`, { icon: '😊' });
 
 			dispatch({ type: USER_LOADED, payload: { user } });
 		} else {
@@ -36,11 +41,24 @@ function App() {
 		}
 	}, [data]);
 
-	if (state.isLoading && !state.isAuthenticated) return <div>Loading...</div>;
+	if (state.isLoading && !state.isAuthenticated)
+		return (
+			<Box
+				sx={{
+					display: 'flex',
+					alignItems: 'center',
+					justifyContent: 'center',
+					height: '100vh',
+					width: '100vw',
+				}}>
+				<CircularProgress size='3rem' />
+			</Box>
+		);
 
 	return (
 		<div>
 			<AuthContext.Provider value={value}>
+				<Toaster toastOptions={{ duration: 3500 }} />
 				<Router>
 					<Routes>
 						<Route path='/' element={<HomePage />} />

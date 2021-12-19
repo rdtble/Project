@@ -2,6 +2,7 @@ import { useMutation } from '@apollo/client';
 import { useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 
+import toast from 'react-hot-toast';
 import ReactMde from 'react-mde';
 import ReactMarkdown from 'react-markdown';
 import Stack from '@mui/material/Stack';
@@ -10,12 +11,12 @@ import Grid from '@mui/material/Grid';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import AddIcon from '@mui/icons-material/Add';
+import IconButton from '@mui/material/IconButton';
 
 import { ADD_POST } from '../queries';
 import Layout from '../layouts/Layout';
 import AuthContext from '../context/context';
 
-// TODO: Handle for failure of adding post
 const CreatePostPage = () => {
 	const navigate = useNavigate();
 	const handleNavigation = (path) => {
@@ -45,7 +46,9 @@ const CreatePostPage = () => {
 
 	const handleAddTag = () => {
 		if (tagText.trim() === '') {
-			alert('Tag cannot be empty!');
+			toast.error('A tag cannot be empty!', {
+				icon: '😅',
+			});
 		} else {
 			setTags([...tags, tagText]);
 
@@ -63,11 +66,18 @@ const CreatePostPage = () => {
 		e.preventDefault();
 
 		if (value.trim() === '') {
-			alert('Description cannot be empty!');
+			toast.error('Post description cannot be empty!', {
+				icon: '😶',
+			});
 		} else {
-			await addPost().then(({ data }) =>
-				handleNavigation(`/post/${data.AddPost._id}`)
-			);
+			await addPost()
+				.then(({ data }) => {
+					toast.success('Posted successfully!', {
+						icon: '😉',
+					});
+					handleNavigation(`/post/${data.AddPost._id}`);
+				})
+				.catch((err) => toast.error(err.message, { icon: '😓' }));
 		}
 	};
 
@@ -116,7 +126,7 @@ const CreatePostPage = () => {
 							))}
 					</Grid>
 
-					<Stack direction='row' spacing={4} marginY={3}>
+					<Stack direction='row' spacing={2} marginY={3}>
 						<TextField
 							id='tag'
 							name='tag'
@@ -128,12 +138,14 @@ const CreatePostPage = () => {
 							onChange={(e) => setTagText(e.target.value)}
 						/>
 
-						<Button
-							variant='outlined'
-							color='primary'
-							onClick={() => handleAddTag()}>
-							<AddIcon />
-						</Button>
+						{tagText !== '' && (
+							<IconButton
+								variant='outlined'
+								color='primary'
+								onClick={() => handleAddTag()}>
+								<AddIcon />
+							</IconButton>
+						)}
 					</Stack>
 
 					<Button

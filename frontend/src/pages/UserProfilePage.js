@@ -22,7 +22,14 @@ const UserProfilePage = () => {
 	if (loading) {
 		return (
 			<Layout>
-				<Box sx={{ display: 'flex' }}>
+				<Box
+					sx={{
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'center',
+						height: '100vh',
+						width: '100vw',
+					}}>
 					<CircularProgress />
 				</Box>
 			</Layout>

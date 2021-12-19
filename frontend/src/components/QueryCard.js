@@ -2,6 +2,7 @@ import { useContext, useState } from 'react';
 import { useMutation } from '@apollo/client';
 import { useNavigate } from 'react-router';
 
+import toast from 'react-hot-toast';
 import ReactMarkdown from 'react-markdown';
 import moment from 'moment';
 import Button from '@mui/material/Button';
@@ -37,10 +38,7 @@ import {
 } from '../queries';
 import WriteReply from './WriteReply';
 
-// FIXME: Handle upvote/downvote and reply button for non-authenticated users
-// TODO: Add functionality to reply buttons
-// TODO: Add toasts for interactions
-const QueryCard = ({ post, mode, location }) => {
+const QueryCard = ({ post, mode }) => {
 	const { state } = useContext(AuthContext);
 	const navigate = useNavigate();
 	const handleNavigation = (path) => {
@@ -85,37 +83,87 @@ const QueryCard = ({ post, mode, location }) => {
 	});
 
 	const handleUpvotePost = () => {
-		if (upvoted.length !== 0) {
-			removeUpvotePost().then((res) => {
-				const { UserRemoveUpVoteFromAPost } = res.data;
-				setPostData({
-					...postData,
-					...UserRemoveUpVoteFromAPost,
-				});
-			});
+		if (!state.isAuthenticated) {
+			toast.error('You need to sign in to do that!', { icon: '😅' });
 		} else {
-			upvotePost().then((res) => {
-				const { UserUpVotesAPost } = res.data;
-				setPostData({ ...postData, ...UserUpVotesAPost });
-			});
+			if (upvoted.length !== 0) {
+				removeUpvotePost()
+					.then((res) => {
+						const { UserRemoveUpVoteFromAPost } = res.data;
+						setPostData({
+							...postData,
+							...UserRemoveUpVoteFromAPost,
+						});
+
+						toast.success('Removed your upvote!', {
+							icon: '😢',
+						});
+					})
+					.catch((err) =>
+						toast.error('Something went wrong...', { icon: '😓' })
+					);
+			} else {
+				upvotePost()
+					.then((res) => {
+						const { UserUpVotesAPost } = res.data;
+						setPostData({ ...postData, ...UserUpVotesAPost });
+
+						toast.success('Upvoted!', {
+							icon: '💖',
+						});
+					})
+					.catch((err) =>
+						toast.error('Something went wrong...', { icon: '😓' })
+					);
+			}
 		}
 	};
 
 	const handleDownvotePost = () => {
-		if (downvoted.length !== 0) {
-			removeDownvotePost().then((res) => {
-				const { UserRemoveDownVoteFromAPost } = res.data;
-				setPostData({
-					...postData,
-					...UserRemoveDownVoteFromAPost,
-				});
-			});
+		if (!state.isAuthenticated) {
+			toast.error('You need to sign in to do that!', { icon: '😅' });
 		} else {
-			downvotePost().then((res) => {
-				const { UserDownVotesAPost } = res.data;
-				setPostData({ ...postData, ...UserDownVotesAPost });
-			});
+			if (downvoted.length !== 0) {
+				removeDownvotePost()
+					.then((res) => {
+						const { UserRemoveDownVoteFromAPost } = res.data;
+						setPostData({
+							...postData,
+							...UserRemoveDownVoteFromAPost,
+						});
+
+						toast.success('Removed your downvote!', {
+							icon: '🤨',
+						});
+					})
+					.catch((err) =>
+						toast.error('Something went wrong...', { icon: '😓' })
+					);
+			} else {
+				downvotePost()
+					.then((res) => {
+						const { UserDownVotesAPost } = res.data;
+						setPostData({ ...postData, ...UserDownVotesAPost });
+
+						toast.success('Downvoted!', {
+							icon: '🥶',
+						});
+					})
+					.catch((err) =>
+						toast.error('Something went wrong...', { icon: '😓' })
+					);
+			}
 		}
+	};
+
+	const handleShare = () => {
+		navigator.clipboard.writeText(
+			window.location.origin.concat(`/post/${post._id}`)
+		);
+
+		toast.success('Link copied to clipboard!', {
+			icon: '😊',
+		});
 	};
 
 	const handleReply = (AddComment) => {
@@ -123,7 +171,13 @@ const QueryCard = ({ post, mode, location }) => {
 	};
 
 	const handleReplyOpen = () => {
-		setReplyOpen(true);
+		if (!state.isAuthenticated) {
+			toast.error('Please sign in to reply to this post!', {
+				icon: '😅',
+			});
+		} else {
+			setReplyOpen(true);
+		}
 	};
 
 	const handleReplyClose = () => {
@@ -139,10 +193,15 @@ const QueryCard = ({ post, mode, location }) => {
 					setPostData({
 						...postData,
 						description: '_**[deleted]**_',
+						isDeleted: true,
+					});
+
+					toast.success('Post deleted!', {
+						icon: '👀',
 					});
 				}
 			})
-			.catch((err) => alert('Cannot delete this post'));
+			.catch((err) => toast.error('Unable to delete...', { icon: '😭' }));
 	};
 
 	return (
@@ -247,13 +306,7 @@ const QueryCard = ({ post, mode, location }) => {
 										size='small'
 										variant='text'
 										startIcon={<ShareIcon />}
-										onClick={() => {
-											navigator.clipboard.writeText(
-												window.location.origin.concat(
-													`/post/${post._id}`
-												)
-											);
-										}}>
+										onClick={handleShare}>
 										Share
 									</Button>
 
@@ -283,7 +336,8 @@ const QueryCard = ({ post, mode, location }) => {
 								<Card
 									variant='outlined'
 									sx={{
-										padding: 1,
+										paddingY: 1,
+										paddingX: 2,
 										backgroundColor: 'lightgray',
 									}}>
 									<Typography component='p' variant='caption'>
@@ -316,12 +370,6 @@ const QueryCard = ({ post, mode, location }) => {
 								</Card>
 							</CardActions>
 						)}
-
-						{/* <Typography component='h3' variant='h6'>
-									<strong>
-										Replies ({postData.replies.length})
-									</strong>
-								</Typography> */}
 
 						{mode !== 'list' && postData.replies && (
 							<Grid container direction='column' marginTop={2}>

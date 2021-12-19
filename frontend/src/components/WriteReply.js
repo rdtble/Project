@@ -1,6 +1,7 @@
 import { useMutation } from '@apollo/client';
 import { useState } from 'react';
 
+import toast from 'react-hot-toast';
 import ReactMde from 'react-mde';
 import ReactMarkdown from 'react-markdown';
 import Stack from '@mui/material/Stack';
@@ -23,14 +24,27 @@ const WriteReply = ({ parentPostId, closeFunction, handleReply }) => {
 		e.preventDefault();
 
 		if (value.trim() === '') {
-			alert('Description cannot be empty!');
-		} else {
-			await addComment().then((res) => {
-				const { AddComment } = res.data;
-
-				handleReply(AddComment.parentPost);
-				closeFunction();
+			toast.error('Your comment cannot be empty!', {
+				icon: '😶',
 			});
+		} else {
+			await addComment()
+				.then((res) => {
+					const { AddComment } = res.data;
+
+					toast.success('Comment posted!', {
+						icon: '😉',
+					});
+
+					handleReply(AddComment.parentPost);
+					closeFunction();
+				})
+				.catch((err) => {
+					toast.error(err.message, {
+						icon: '😓',
+					});
+					closeFunction();
+				});
 		}
 	};
 

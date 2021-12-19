@@ -7,12 +7,14 @@ import Toolbar from '@mui/material/Toolbar';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
-import ListItemIcon from '@mui/material/ListItemIcon';
+import LoginIcon from '@mui/icons-material/Login';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 
+import ListItemIcon from '@mui/material/ListItemIcon';
+import PersonAddAltIcon from '@mui/icons-material/PersonAddAlt';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
-import PersonIcon from '@mui/icons-material/Person';
+import AccountBoxIcon from '@mui/icons-material/AccountBox';
 import Logout from '@mui/icons-material/Logout';
 
 const Navbar = () => {
@@ -53,16 +55,18 @@ const Navbar = () => {
 						home
 					</Button>
 
-					<Button
-						variant='text'
-						color='inherit'
-						onClick={() => handleNavigation('/chat')}>
-						Global Chat
-					</Button>
+					{state.isAuthenticated && (
+						<Button
+							variant='text'
+							color='inherit'
+							onClick={() => handleNavigation('/chat')}>
+							Global Chat
+						</Button>
+					)}
 				</Stack>
 
 				<IconButton onClick={handleClick} size='small'>
-					<PersonIcon />
+					<AccountBoxIcon />
 				</IconButton>
 			</Toolbar>
 
@@ -75,7 +79,7 @@ const Navbar = () => {
 				{!state.isAuthenticated && (
 					<MenuItem onClick={() => handleNavigation('/login')}>
 						<ListItemIcon>
-							<AccountCircleIcon fontSize='small' />
+							<LoginIcon fontSize='small' />
 						</ListItemIcon>
 						Login
 					</MenuItem>
@@ -84,7 +88,7 @@ const Navbar = () => {
 				{!state.isAuthenticated && (
 					<MenuItem onClick={() => handleNavigation('/register')}>
 						<ListItemIcon>
-							<AccountCircleIcon fontSize='small' />
+							<PersonAddAltIcon fontSize='small' />
 						</ListItemIcon>
 						Register
 					</MenuItem>

@@ -2,6 +2,7 @@ import { useLazyQuery, useMutation } from '@apollo/client';
 import { useContext, useState } from 'react';
 import { useNavigate } from 'react-router';
 
+import toast from 'react-hot-toast';
 import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
@@ -52,10 +53,12 @@ const LoginPage = () => {
 
 					setLoading(false);
 
+					toast.success('Successfully logged in!', { icon: '😎' });
 					handleNavigation('/');
 				});
 			})
 			.catch((err) => {
+				toast.success(err.message, { icon: '😓' });
 				console.log(err);
 				setLoading(false);
 			});
