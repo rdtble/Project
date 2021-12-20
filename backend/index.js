@@ -7,15 +7,8 @@ const {
   AuthenticationError,
 } = require("apollo-server");
 
-//const redis = require("redis");
-//const bluebird = require("bluebird");
-//bluebird.promisifyAll(redis.RedisClient.prototype);
-const uuid = require("uuid");
-//const client = redis.createClient();
-
 const userData = require("./data/users");
 const postsData = require("./data/posts");
-const { promisifyAll } = require("bluebird");
 
 const dateScalar = new GraphQLScalarType({
   name: "Date",
@@ -26,6 +19,8 @@ const dateScalar = new GraphQLScalarType({
     return value.toISOString();
   },
 });
+
+//final verision backend
 
 const typeDefs = gql`
   scalar Date
@@ -127,7 +122,7 @@ let resolvers = {
 
     getUser: async (_, args) => {
       try {
-        const user = await userData.getUserbyID(args.username);
+        const user = await userData.getUserbyUserName(args.username);
         return user;
       } catch (e) {
         console.log(e);
@@ -279,7 +274,7 @@ let resolvers = {
 
     userDownVotedPosts: async (parentArgs) => {
       try {
-        let posts = parentArgs.userDownVotedPosts;
+        let posts = parentArgs.userDownvotedPosts;
 
         posts = posts.map(async (postId) => {
           return await postsData.getPostbyID(postId);
@@ -592,6 +587,10 @@ let resolvers = {
 const server = new ApolloServer({
   typeDefs,
   resolvers,
+  cors: {
+    origin: "*",
+    credentials: true,
+  },
   context: async ({ req }) => {
     return { user: req.headers.authorization };
   },
