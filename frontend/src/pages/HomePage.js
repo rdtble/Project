@@ -96,7 +96,6 @@ const HomePage = () => {
 				<Grid container direction='column'>
 					<Grid
 						container
-						xs
 						alignItems='center'
 						justifyContent='center'
 						gap={4}

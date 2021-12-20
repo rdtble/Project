@@ -20,8 +20,6 @@ import UserProfilePage from './pages/UserProfilePage';
 import RegisterPage from './pages/RegisterPage';
 import ChatPage from './pages/ChatPage';
 
-// TODO: Finish search query and filter by tag page
-// TODO: Add links to post tags
 function App() {
 	const [getUser, { data }] = useLazyQuery(GET_USER_INFO, {
 		context: { headers: { authorization: localStorage.getItem('token') } },
