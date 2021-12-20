@@ -31,11 +31,14 @@ const addPost = async (
     errorHandling.checkString(tags[i], "Tag");
   }
 
+  let setTags = tags.map((x) => x.toLowerCase());
+  setTags = setTags.filter((v, i, a) => a.indexOf(v) === i);
+
   const post = new posts({
     userPosted: userID,
     title: title,
     description: description,
-    tags: tags,
+    tags: setTags,
     usersUpvoted: [],
     usersDownvoted: [],
     isReply: isReply,
@@ -75,8 +78,8 @@ const addReplytoPost = async (postID, replyPostID) => {
   return true;
 };
 
-// delete does not mean deleting the post. It means to make the post description as "deleted" and user_info Anonymous.
-//if the same user upVotes or downVotes the post, it will remove
+// delete does not mean deleting the post. It means to make the post description as "deleted"
+//if the same user upVotes or downVotes the post, it will be removed
 const deletePost = async (postID, userID) => {
   errorHandling.checkStringObjectId(postID, "Post ID");
   errorHandling.checkStringObjectId(userID, "User ID");
@@ -86,7 +89,7 @@ const deletePost = async (postID, userID) => {
       userPosted: userID,
     },
     {
-      description: "Post Deleted",
+      description: "_**[deleted]**_",
       isDeleted: true,
       $pullAll: {
         usersDownvoted: [userID],
