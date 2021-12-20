@@ -24,8 +24,8 @@ const PostPage = () => {
 						display: 'flex',
 						alignItems: 'center',
 						justifyContent: 'center',
-						height: '100vh',
-						width: '100vw',
+						height: '100%',
+						width: '100%',
 					}}>
 					<CircularProgress />
 				</Box>

@@ -27,6 +27,7 @@ import ReplyIcon from '@mui/icons-material/Reply';
 import CloseIcon from '@mui/icons-material/Close';
 import ClearAllIcon from '@mui/icons-material/ClearAll';
 import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp';
+import { grey } from '@mui/material/colors';
 
 import AuthContext from '../context/context';
 import {
@@ -338,7 +339,7 @@ const QueryCard = ({ post, mode }) => {
 									sx={{
 										paddingY: 1,
 										paddingX: 2,
-										backgroundColor: 'lightgray',
+										backgroundColor: grey['200'],
 									}}>
 									<Typography component='p' variant='caption'>
 										<Link

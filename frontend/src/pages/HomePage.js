@@ -15,6 +15,9 @@ import AuthContext from '../context/context';
 import Layout from '../layouts/Layout';
 import { GET_POSTS } from '../queries';
 import QueryCard from '../components/QueryCard';
+import { Chip } from '@mui/material';
+
+const filters = ['default', 'time', 'upvotes', 'downvotes'];
 
 const HomePage = () => {
 	const navigate = useNavigate();
@@ -23,20 +26,24 @@ const HomePage = () => {
 	};
 
 	const [hasMoreResults, setHasMoreResults] = useState(true);
+	const [currentFilter, setCurrentFilter] = useState('default');
 
 	const { state } = useContext(AuthContext);
 
 	const { data, error, loading, fetchMore } = useQuery(GET_POSTS, {
-		variables: { pageNum: 1, pageSize: 10, sortBy: 'default' },
+		variables: { pageNum: 1, pageSize: 10, sortBy: currentFilter },
 		fetchPolicy: 'network-only',
 	});
 
+	const handleFilter = (filter) => {
+		setCurrentFilter(filter);
+	};
 	const handleFetchMore = (getPosts) =>
 		fetchMore({
 			variables: {
 				pageNum: Math.ceil(getPosts.length / 10) + 1,
 				pageSize: 10,
-				sortBy: 'default',
+				sortBy: currentFilter,
 			},
 			updateQuery: (prevResult, { fetchMoreResult }) => {
 				if (!fetchMoreResult) {
@@ -65,8 +72,8 @@ const HomePage = () => {
 						display: 'flex',
 						alignItems: 'center',
 						justifyContent: 'center',
-						height: '100vh',
-						width: '100vw',
+						height: '100%',
+						width: '100%',
 					}}>
 					<CircularProgress />
 				</Box>
@@ -87,6 +94,27 @@ const HomePage = () => {
 					Home
 				</Typography>
 				<Grid container direction='column'>
+					<Grid
+						container
+						alignItems='center'
+						justifyContent='center'
+						gap={4}
+						paddingY={2}>
+						{filters.map((filter) => (
+							<Grid item key={filter}>
+								<Chip
+									label={filter}
+									color={
+										filter === currentFilter
+											? 'primary'
+											: 'default'
+									}
+									onClick={() => handleFilter(filter)}
+								/>
+							</Grid>
+						))}
+					</Grid>
+
 					{getPosts.length === 0 && (
 						<Typography component='h2' variant='h5'>
 							No posts to show!
