@@ -1,17 +1,40 @@
 // import { appBarClasses } from '@mui/material';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 // import io from 'socket.io-client';
 import Navbar from '../components/Navbar';
 import VoxeetSDK from '@voxeet/voxeet-web-sdk';
+import { useLazyQuery } from '@apollo/client';
+import { GET_USER_INFO } from '../queries';
 
 function ChatPage() {
     const [loading, setLoading] = useState(true);
+    const [currentUserName, setcurrentUserName] = useState("");
     let loggedInAs = <h3> </h3>
-
+    const [sessionStarted, setSessionStarted] = useState(false);
     const [insideChatRoom, setInsideChatRoom] = useState(false);
     let joinButtonDisplay = null;
     let leaveButtonDisplay = null;
     let chatRoomHeader = null;
+    let participantsList = <ul></ul>;
+    // let currentuser = "USERNAME!"
+
+
+    // const [getUser, { data }] = useLazyQuery(GET_USER_INFO, {
+    //     context: { headers: { authorization: localStorage.getItem('token') } },
+    // });
+
+
+
+    // getUser();
+
+    // if (data) {
+    //     const user = data.getUserInfo;
+
+    //     setcurrentUserName(user.firstname);
+
+    //     // dispatch({ type: USER_LOADED, payload: { user } });
+    // }
+
 
     try {
         VoxeetSDK.initialize("KPtPBC3RfX0l85Qm9RkIZw==", "AMaODzmyjiEot7BlbVxcQ44s0KkM8tt3tt4edofmZqg=");
@@ -20,27 +43,34 @@ function ChatPage() {
         console.log(e);
     }
 
-    let currentuser = "USERNAME!"
 
-    const sessionopen = async () => {
-        try {
-            // Open the session here !!!!
-            console.log("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-            await VoxeetSDK.session.open({ name: currentuser });
+    if (!sessionStarted) {
 
-            setLoading(false);
 
-            loggedInAs = <h3> You are logged in as {currentuser} </h3>
-            joinButtonDisplay = <button id="join-btn-chat" onClick={joinChat} >Join</button>;
-            leaveButtonDisplay = <button id="leave-btn-chat" onClick={leaveChat} >Leave</button>;
-        } catch (e) {
-            console.log('ERROR : ' + e)
+        const sessionopen = async () => {
+            try {
+                // Open the session here !!!!
+                // try {
+                //     await VoxeetSDK.session.close({ name: currentuser });
+                // } catch (e) {
+                //     console.log("Closing - ", e);
+                // }
+                console.log(sessionStarted);
+
+                setLoading(false);
+                setSessionStarted(true);
+                await VoxeetSDK.session.open({ name: currentUserName });
+                // loggedInAs = <h3> You are logged in as {currentuser} </h3>
+                // joinButtonDisplay = <button id="join-btn-chat" onClick={joinChat} >Join</button>;
+                // leaveButtonDisplay = <button id="leave-btn-chat" onClick={leaveChat} >Leave</button>;
+            } catch (e) {
+                console.log('ERROR : ' + e)
+            }
         }
+        sessionopen();
     }
 
-    sessionopen();
-
-    const joinChat = () => {
+    const joinChat = async () => {
 
         let conferenceAlias = "Pradeep";
         console.log("CON CREATED");
@@ -83,15 +113,29 @@ function ChatPage() {
 
 
     // useEffect(() => {
-    // 	VoxeetSDK.conference.on('streamAdded', (participant, stream) => {
-    // 		if (stream.type === 'ScreenShare') return;
+    //     VoxeetSDK.conference.on('streamAdded', (participant, stream) => {
+    //         if (stream.type != 'ScreenShare') {
 
-    // 		if (stream.getVideoTracks().length) {
-    // 			addVideoNode(participant, stream);
-    // 		}
-    // 		addParticipantNode(participant);
+    //             // if (stream.getVideoTracks().length) {
+    //             //     addVideoNode(participant, stream);
+    //             // }
 
-    // 	});
+    //             // const participantsList = document.getElementById("participants-list");
+
+    //             // if the participant is the current session user, don’t add them to the list
+    //             if (participant.id === VoxeetSDK.session.participant.id) return;
+
+    //             // let participantNode = document.createElement("li");
+    //             // participantNode.setAttribute("id", "participant-" + participant.id);
+    //             // participantNode.innerText = `${participant.info.name}`;
+
+    //             participantsList = <ul><li>{participant.info.name}</li></ul>;
+    //         }
+    //     });
+
+    //     // VoxeetSDK.conference.on('streamRemoved', (participant, stream) => {
+    //     //     removeParticipantNode(participant);
+    //     // });
     // }, []);
 
     // --------------------------------------------------------------------- SOCKET IO ------------------------------------------------------------------------------------------------
@@ -230,11 +274,14 @@ function ChatPage() {
                     {/* <div id="actions">
 					<button id="start-video-btn" disabled>Start video</button>
 					<button id="stop-video-btn" disabled>Stop video</button>
-				</div> */}
+				    </div> */}
                     {/* <div id="participants">
 					<h3>Participants</h3>
 					<ul id="participants-list"></ul>
-				</div> */}
+				    </div> */}
+                    <div>
+                        {participantsList}
+                    </div>
                 </div>
 
                 <script src="https://unpkg.com/@voxeet/voxeet-web-sdk@0.3.10/dist/voxeet-sdk.js" type="text/javascript"></script>
