@@ -1,5 +1,7 @@
 # RoundTable
 
+www.rdtble.com
+
 RoundTable is a web application that allows people to create and discuss a query and reply to other queries. Users can create an account, and create their own category (such as Science, Medicine, Astronomy, etc.) and make a forum post accordingly, to which other users can engage with, by upvoting/downvoting/commenting on it. The user creating the post will be using a Markdown editor to create content. Users will have the ability to explore other users' profiles. The website will also have a global chatroom, where any user can join in on an ongoing discussion.
 
 ## Core tech used
